@@ -3,6 +3,7 @@ package vehicle
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -88,6 +89,13 @@ func NewTeslaFromConfig(other map[string]interface{}) (api.Vehicle, error) {
 	v.vehicleStateG = provider.NewCached(v.vehicleState, cc.Cache).InterfaceGetter()
 	v.driveStateG = provider.NewCached(v.driveState, cc.Cache).InterfaceGetter()
 
+	if err := v.stream("cpuidle@gmx.de"); err != nil {
+		log.WARN.Println("streaming failed:", err)
+	}
+
+	println("sleep")
+	time.Sleep(10 * time.Second)
+
 	return v, nil
 }
 
@@ -104,6 +112,27 @@ func (v *Tesla) vehicleState() (interface{}, error) {
 // driveState implements the climater api
 func (v *Tesla) driveState() (interface{}, error) {
 	return v.vehicle.DriveState()
+}
+
+func (v *Tesla) stream(email string) error {
+	tesla.StreamParams = "soc,range"
+	evtC, errC, err := v.vehicle.Stream(email)
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		for {
+			select {
+			case evt := <-evtC:
+				fmt.Println(evt)
+			case err := <-errC:
+				println("streaming failed:", err)
+			}
+		}
+	}()
+
+	return nil
 }
 
 // SoC implements the api.Vehicle interface
