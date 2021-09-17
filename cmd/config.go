@@ -178,6 +178,7 @@ func (cp *ConfigProvider) configureVehicles(conf config) error {
 
 			cc.Other["token"] = conf.SponsorToken
 			cc.Other["brand"] = cc.Type
+
 			cc.Type = "cloud"
 		}
 
