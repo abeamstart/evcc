@@ -11,6 +11,7 @@ import (
 	"github.com/evcc-io/evcc/provider/mqtt"
 	"github.com/evcc-io/evcc/push"
 	"github.com/evcc-io/evcc/server"
+	"github.com/evcc-io/evcc/util/sponsor"
 	"github.com/evcc-io/evcc/vehicle"
 )
 
@@ -30,7 +31,7 @@ type config struct {
 	Messaging    messagingConfig
 	Meters       []qualifiedConfig
 	Chargers     []qualifiedConfig
-	Vehicles     []qualifiedConfig
+	Vehicles     []qualifiedVehicleConfig // includes cloud attribute
 	Tariffs      tariffConfig
 	Site         map[string]interface{}
 	LoadPoints   []map[string]interface{}
@@ -51,6 +52,11 @@ func (conf *mqttConfig) RootTopic() string {
 type qualifiedConfig struct {
 	Name, Type string
 	Other      map[string]interface{} `mapstructure:",remain"`
+}
+
+type qualifiedVehicleConfig struct {
+	qualifiedConfig `mapstructure:",squash"`
+	Cloud           bool
 }
 
 type typedConfig struct {
@@ -163,6 +169,16 @@ func (cp *ConfigProvider) configureVehicles(conf config) error {
 	for id, cc := range conf.Vehicles {
 		if cc.Name == "" {
 			return fmt.Errorf("cannot create %s vehicle: missing name", humanize.Ordinal(id+1))
+		}
+
+		if cc.Cloud {
+			if !sponsor.IsAuthorized() {
+				return api.ErrSponsorRequired
+			}
+
+			cc.Other["token"] = conf.SponsorToken
+			cc.Other["brand"] = cc.Type
+			cc.Type = "cloud"
 		}
 
 		v, err := vehicle.NewFromConfig(cc.Type, cc.Other)

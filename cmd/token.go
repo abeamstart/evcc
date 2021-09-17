@@ -35,7 +35,7 @@ func runToken(cmd *cobra.Command, args []string) {
 
 	var vehicleConf qualifiedConfig
 	if len(conf.Vehicles) == 1 {
-		vehicleConf = conf.Vehicles[0]
+		vehicleConf = conf.Vehicles[0].qualifiedConfig
 	} else if len(args) == 1 {
 		vehicleConf = funk.Find(conf.Vehicles, func(v qualifiedConfig) bool {
 			return strings.EqualFold(v.Name, args[0])
