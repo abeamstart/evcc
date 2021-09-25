@@ -10,6 +10,7 @@ import (
 	"github.com/avast/retry-go/v3"
 	"github.com/evcc-io/evcc/api"
 	"github.com/evcc-io/evcc/core/loadpoint"
+	"github.com/evcc-io/evcc/core/storage"
 	"github.com/evcc-io/evcc/push"
 	"github.com/evcc-io/evcc/util"
 )
@@ -377,7 +378,9 @@ func (site *Site) Prepare(uiChan chan<- util.Param, pushChan chan<- push.Event) 
 			}
 		}(id)
 
-		lp.Prepare(lpUIChan, lpPushChan, site.lpUpdateChan)
+		db := storage.NewTransactor(id + 1)
+
+		lp.Prepare(lpUIChan, lpPushChan, site.lpUpdateChan, db)
 	}
 }
 

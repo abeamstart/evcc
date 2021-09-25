@@ -24,6 +24,8 @@ type ChargeRater struct {
 	chargedEnergy float64
 }
 
+var _ api.ChargeRater = (*ChargeRater)(nil)
+
 // NewChargeRater creates charge rater and initializes realtime clock
 func NewChargeRater(log *util.Logger, meter api.Meter) *ChargeRater {
 	return &ChargeRater{

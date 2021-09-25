@@ -12,6 +12,7 @@ import (
 	"github.com/evcc-io/evcc/api"
 	"github.com/evcc-io/evcc/core/loadpoint"
 	"github.com/evcc-io/evcc/core/soc"
+	"github.com/evcc-io/evcc/core/storage"
 	"github.com/evcc-io/evcc/core/wrapper"
 	"github.com/evcc-io/evcc/provider"
 	"github.com/evcc-io/evcc/push"
@@ -79,6 +80,7 @@ type LoadPoint struct {
 	uiChan   chan<- util.Param // client push messages
 	lpChan   chan<- *LoadPoint // update requests
 	log      *util.Logger
+	txn      storage.Transaction
 
 	// exposed public configuration
 	sync.Mutex                // guard status
@@ -306,6 +308,10 @@ func (lp *LoadPoint) evChargeStartHandler() {
 	lp.log.INFO.Println("start charging ->")
 	lp.pushEvent(evChargeStart)
 
+	if lp.txn != nil {
+		lp.txn.Start()
+	}
+
 	// soc update reset
 	lp.socUpdated = time.Time{}
 }
@@ -314,6 +320,10 @@ func (lp *LoadPoint) evChargeStartHandler() {
 func (lp *LoadPoint) evChargeStopHandler() {
 	lp.log.INFO.Println("stop charging <-")
 	lp.pushEvent(evChargeStop)
+
+	if lp.txn != nil {
+		lp.txn.Stop()
+	}
 
 	// soc update reset
 	lp.socUpdated = time.Time{}
@@ -415,10 +425,11 @@ func (lp *LoadPoint) Name() string {
 }
 
 // Prepare loadpoint configuration by adding missing helper elements
-func (lp *LoadPoint) Prepare(uiChan chan<- util.Param, pushChan chan<- push.Event, lpChan chan<- *LoadPoint) {
+func (lp *LoadPoint) Prepare(uiChan chan<- util.Param, pushChan chan<- push.Event, lpChan chan<- *LoadPoint, txn storage.Transaction) {
 	lp.uiChan = uiChan
 	lp.pushChan = pushChan
 	lp.lpChan = lpChan
+	lp.txn = txn
 
 	// assume all phases are active
 	lp.activePhases = lp.Phases
@@ -1070,8 +1081,7 @@ func (lp *LoadPoint) updateChargePower() {
 
 // updateChargeCurrents uses MeterCurrent interface to count phases with current >=1A
 func (lp *LoadPoint) updateChargeCurrents() {
-	lp.chargeCurrents = nil
-	phaseMeter, ok := lp.chargeMeter.(api.MeterCurrent)
+	chargeMeter, ok := lp.chargeMeter.(api.MeterCurrent)
 	if !ok {
 		// guess active phases from power consumption
 		// assumes that chargePower has been updated before
@@ -1087,7 +1097,7 @@ func (lp *LoadPoint) updateChargeCurrents() {
 		return
 	}
 
-	i1, i2, i3, err := phaseMeter.Currents()
+	i1, i2, i3, err := chargeMeter.Currents()
 	if err != nil {
 		lp.log.ERROR.Printf("charge meter: %v", err)
 		return
@@ -1117,6 +1127,12 @@ func (lp *LoadPoint) updateChargeCurrents() {
 func (lp *LoadPoint) publishChargeProgress() {
 	if f, err := lp.chargeRater.ChargedEnergy(); err == nil {
 		lp.chargedEnergy = 1e3 * f // convert to Wh
+
+		if lp.txn != nil {
+			if err := lp.txn.Update(&storage.Record{ChargedEnergy: lp.chargedEnergy}); err != nil {
+				lp.log.ERROR.Printf("database update: %v", err)
+			}
+		}
 	} else {
 		lp.log.ERROR.Printf("charge rater: %v", err)
 	}

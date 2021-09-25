@@ -65,7 +65,7 @@ func attachListeners(t *testing.T, lp *LoadPoint) {
 		charger.EXPECT().MaxCurrent(int64(lp.MinCurrent)).Return(nil)
 	}
 
-	lp.Prepare(uiChan, pushChan, lpChan)
+	lp.Prepare(uiChan, pushChan, lpChan, nil)
 }
 
 func TestNew(t *testing.T) {
