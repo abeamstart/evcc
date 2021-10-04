@@ -6,12 +6,12 @@ import (
 	"github.com/evcc-io/evcc/api"
 )
 
-func decorateWarp(base *Warp, meter func() (float64, error), meterEnergy func() (float64, error), meterCurrent func() (float64, float64, float64, error)) api.Charger {
+func decorateWarp(base *Warp, meter func() (float64, error), meterEnergy func() (float64, error), meterCurrent func() (float64, float64, float64, error), identifier func() (string, error)) api.Charger {
 	switch {
-	case meter == nil && meterCurrent == nil && meterEnergy == nil:
+	case identifier == nil && meter == nil && meterCurrent == nil && meterEnergy == nil:
 		return base
 
-	case meter != nil && meterCurrent == nil && meterEnergy == nil:
+	case identifier == nil && meter != nil && meterCurrent == nil && meterEnergy == nil:
 		return &struct {
 			*Warp
 			api.Meter
@@ -22,7 +22,7 @@ func decorateWarp(base *Warp, meter func() (float64, error), meterEnergy func() 
 			},
 		}
 
-	case meter == nil && meterCurrent == nil && meterEnergy != nil:
+	case identifier == nil && meter == nil && meterCurrent == nil && meterEnergy != nil:
 		return &struct {
 			*Warp
 			api.MeterEnergy
@@ -33,7 +33,7 @@ func decorateWarp(base *Warp, meter func() (float64, error), meterEnergy func() 
 			},
 		}
 
-	case meter != nil && meterCurrent == nil && meterEnergy != nil:
+	case identifier == nil && meter != nil && meterCurrent == nil && meterEnergy != nil:
 		return &struct {
 			*Warp
 			api.Meter
@@ -48,7 +48,7 @@ func decorateWarp(base *Warp, meter func() (float64, error), meterEnergy func() 
 			},
 		}
 
-	case meter == nil && meterCurrent != nil && meterEnergy == nil:
+	case identifier == nil && meter == nil && meterCurrent != nil && meterEnergy == nil:
 		return &struct {
 			*Warp
 			api.MeterCurrent
@@ -59,7 +59,7 @@ func decorateWarp(base *Warp, meter func() (float64, error), meterEnergy func() 
 			},
 		}
 
-	case meter != nil && meterCurrent != nil && meterEnergy == nil:
+	case identifier == nil && meter != nil && meterCurrent != nil && meterEnergy == nil:
 		return &struct {
 			*Warp
 			api.Meter
@@ -74,7 +74,7 @@ func decorateWarp(base *Warp, meter func() (float64, error), meterEnergy func() 
 			},
 		}
 
-	case meter == nil && meterCurrent != nil && meterEnergy != nil:
+	case identifier == nil && meter == nil && meterCurrent != nil && meterEnergy != nil:
 		return &struct {
 			*Warp
 			api.MeterCurrent
@@ -89,7 +89,7 @@ func decorateWarp(base *Warp, meter func() (float64, error), meterEnergy func() 
 			},
 		}
 
-	case meter != nil && meterCurrent != nil && meterEnergy != nil:
+	case identifier == nil && meter != nil && meterCurrent != nil && meterEnergy != nil:
 		return &struct {
 			*Warp
 			api.Meter
@@ -97,6 +97,142 @@ func decorateWarp(base *Warp, meter func() (float64, error), meterEnergy func() 
 			api.MeterEnergy
 		}{
 			Warp: base,
+			Meter: &decorateWarpMeterImpl{
+				meter: meter,
+			},
+			MeterCurrent: &decorateWarpMeterCurrentImpl{
+				meterCurrent: meterCurrent,
+			},
+			MeterEnergy: &decorateWarpMeterEnergyImpl{
+				meterEnergy: meterEnergy,
+			},
+		}
+
+	case identifier != nil && meter == nil && meterCurrent == nil && meterEnergy == nil:
+		return &struct {
+			*Warp
+			api.Identifier
+		}{
+			Warp: base,
+			Identifier: &decorateWarpIdentifierImpl{
+				identifier: identifier,
+			},
+		}
+
+	case identifier != nil && meter != nil && meterCurrent == nil && meterEnergy == nil:
+		return &struct {
+			*Warp
+			api.Identifier
+			api.Meter
+		}{
+			Warp: base,
+			Identifier: &decorateWarpIdentifierImpl{
+				identifier: identifier,
+			},
+			Meter: &decorateWarpMeterImpl{
+				meter: meter,
+			},
+		}
+
+	case identifier != nil && meter == nil && meterCurrent == nil && meterEnergy != nil:
+		return &struct {
+			*Warp
+			api.Identifier
+			api.MeterEnergy
+		}{
+			Warp: base,
+			Identifier: &decorateWarpIdentifierImpl{
+				identifier: identifier,
+			},
+			MeterEnergy: &decorateWarpMeterEnergyImpl{
+				meterEnergy: meterEnergy,
+			},
+		}
+
+	case identifier != nil && meter != nil && meterCurrent == nil && meterEnergy != nil:
+		return &struct {
+			*Warp
+			api.Identifier
+			api.Meter
+			api.MeterEnergy
+		}{
+			Warp: base,
+			Identifier: &decorateWarpIdentifierImpl{
+				identifier: identifier,
+			},
+			Meter: &decorateWarpMeterImpl{
+				meter: meter,
+			},
+			MeterEnergy: &decorateWarpMeterEnergyImpl{
+				meterEnergy: meterEnergy,
+			},
+		}
+
+	case identifier != nil && meter == nil && meterCurrent != nil && meterEnergy == nil:
+		return &struct {
+			*Warp
+			api.Identifier
+			api.MeterCurrent
+		}{
+			Warp: base,
+			Identifier: &decorateWarpIdentifierImpl{
+				identifier: identifier,
+			},
+			MeterCurrent: &decorateWarpMeterCurrentImpl{
+				meterCurrent: meterCurrent,
+			},
+		}
+
+	case identifier != nil && meter != nil && meterCurrent != nil && meterEnergy == nil:
+		return &struct {
+			*Warp
+			api.Identifier
+			api.Meter
+			api.MeterCurrent
+		}{
+			Warp: base,
+			Identifier: &decorateWarpIdentifierImpl{
+				identifier: identifier,
+			},
+			Meter: &decorateWarpMeterImpl{
+				meter: meter,
+			},
+			MeterCurrent: &decorateWarpMeterCurrentImpl{
+				meterCurrent: meterCurrent,
+			},
+		}
+
+	case identifier != nil && meter == nil && meterCurrent != nil && meterEnergy != nil:
+		return &struct {
+			*Warp
+			api.Identifier
+			api.MeterCurrent
+			api.MeterEnergy
+		}{
+			Warp: base,
+			Identifier: &decorateWarpIdentifierImpl{
+				identifier: identifier,
+			},
+			MeterCurrent: &decorateWarpMeterCurrentImpl{
+				meterCurrent: meterCurrent,
+			},
+			MeterEnergy: &decorateWarpMeterEnergyImpl{
+				meterEnergy: meterEnergy,
+			},
+		}
+
+	case identifier != nil && meter != nil && meterCurrent != nil && meterEnergy != nil:
+		return &struct {
+			*Warp
+			api.Identifier
+			api.Meter
+			api.MeterCurrent
+			api.MeterEnergy
+		}{
+			Warp: base,
+			Identifier: &decorateWarpIdentifierImpl{
+				identifier: identifier,
+			},
 			Meter: &decorateWarpMeterImpl{
 				meter: meter,
 			},
@@ -110,6 +246,14 @@ func decorateWarp(base *Warp, meter func() (float64, error), meterEnergy func() 
 	}
 
 	return nil
+}
+
+type decorateWarpIdentifierImpl struct {
+	identifier func() (string, error)
+}
+
+func (impl *decorateWarpIdentifierImpl) Identify() (string, error) {
+	return impl.identifier()
 }
 
 type decorateWarpMeterImpl struct {

@@ -40,3 +40,9 @@ type MeterState struct {
 	PhasesActive    []bool  `json:"phases_active"`
 	PhasesConnected []bool  `json:"phases_connected"`
 }
+
+type NfcTag struct {
+	Type     int    `json:"tag_type"`
+	ID       []byte `json:"tag_id"`
+	LastSeen int64  `json:"last_seen"`
+}
