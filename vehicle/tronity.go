@@ -146,13 +146,8 @@ func (v *Tronity) RefreshToken(_ *oauth2.Token) (*oauth2.Token, error) {
 		GrantType:    "app",
 	}
 
-	req, err := request.New(http.MethodPost, v.oc.Endpoint.TokenURL, request.MarshalJSON(data), request.JSONEncoding)
-	if err != nil {
-		return nil, err
-	}
-
 	var token oauth2.Token
-	err = request.NewHelper(v.log).DoJSON(req, &token)
+	err := request.NewHelper(v.log).PostJSON(v.oc.Endpoint.TokenURL, request.MarshalJSON(data), &token)
 
 	return &token, err
 }

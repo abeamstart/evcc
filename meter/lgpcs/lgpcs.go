@@ -145,25 +145,17 @@ func (m *Com) refreshData() (EssData, error) {
 		"auth_key": m.authKey,
 	}
 
-	req, err := request.New(http.MethodPost, m.uri+MeterURI, request.MarshalJSON(data), request.JSONEncoding)
-	if err != nil {
-		return EssData{}, err
-	}
-
 	var resp MeterResponse
 
-	if err = m.DoJSON(req, &resp); err != nil {
+	err := m.PostJSON(m.uri+MeterURI, request.MarshalJSON(data), &resp)
+	if err != nil {
 		// re-login if request returns 405-error
 		if err2, ok := err.(request.StatusError); ok && err2.HasStatus(http.StatusMethodNotAllowed) {
 			err = m.Login()
 
 			if err == nil {
 				data["auth_key"] = m.authKey
-				req, err = request.New(http.MethodPost, m.uri+MeterURI, request.MarshalJSON(data), request.JSONEncoding)
-			}
-
-			if err == nil {
-				err = m.DoJSON(req, &resp)
+				err = m.PostJSON(m.uri+MeterURI, request.MarshalJSON(data), &resp)
 			}
 		}
 	}

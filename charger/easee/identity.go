@@ -2,7 +2,6 @@ package easee
 
 import (
 	"fmt"
-	"net/http"
 	"time"
 
 	"github.com/evcc-io/evcc/util"
@@ -52,14 +51,12 @@ func TokenSource(log *util.Logger, user, password string) (oauth2.TokenSource, e
 		Password: password,
 	}
 
-	uri := fmt.Sprintf("%s/%s", API, "accounts/token")
-	req, err := request.New(http.MethodPost, uri, request.MarshalJSON(data), request.JSONEncoding)
+	var token Token
 
+	uri := fmt.Sprintf("%s/%s", API, "accounts/token")
+	err := c.PostJSON(uri, request.MarshalJSON(data), &token)
 	if err == nil {
-		var token Token
-		if err = c.DoJSON(req, &token); err == nil {
-			c.TokenSource = oauth.RefreshTokenSource(token.AsOAuth2Token(), c)
-		}
+		c.TokenSource = oauth.RefreshTokenSource(token.AsOAuth2Token(), c)
 	}
 
 	return c, err
@@ -75,14 +72,13 @@ func (c *tokenSource) RefreshToken(token *oauth2.Token) (*oauth2.Token, error) {
 	}
 
 	uri := fmt.Sprintf("%s/%s", API, "accounts/refresh_token")
-	req, err := request.New(http.MethodPost, uri, request.MarshalJSON(data), request.JSONEncoding)
 
 	var res *oauth2.Token
+	var refreshed Token
+
+	err := c.PostJSON(uri, request.MarshalJSON(data), &refreshed)
 	if err == nil {
-		var refreshed Token
-		if err = c.DoJSON(req, &refreshed); err == nil {
-			res = refreshed.AsOAuth2Token()
-		}
+		res = refreshed.AsOAuth2Token()
 	}
 
 	return res, err

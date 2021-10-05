@@ -2,6 +2,7 @@ package request
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 	"time"
 
@@ -48,11 +49,17 @@ func (r *Helper) GetBody(url string) ([]byte, error) {
 	return body, err
 }
 
-// decodeJSON reads HTTP response and decodes JSON body if error is nil
+// decodeJSON reads HTTP response and decodes JSON body if res is specified
 func decodeJSON(resp *http.Response, res interface{}) error {
 	if err := ResponseError(resp); err != nil {
-		_ = json.NewDecoder(resp.Body).Decode(&res)
+		if res != nil {
+			_ = json.NewDecoder(resp.Body).Decode(&res)
+		}
 		return err
+	}
+
+	if res == nil {
+		return nil
 	}
 
 	return json.NewDecoder(resp.Body).Decode(&res)
@@ -70,10 +77,20 @@ func (r *Helper) DoJSON(req *http.Request, res interface{}) error {
 
 // GetJSON executes HTTP GET request and decodes JSON response. It returns a StatusError on response codes other than HTTP 2xx.
 func (r *Helper) GetJSON(url string, res interface{}) error {
-	resp, err := r.Get(url)
-	if err == nil {
-		defer resp.Body.Close()
-		err = decodeJSON(resp, &res)
+	req, err := New(http.MethodGet, url, nil, JSONEncoding)
+	if err != nil {
+		return err
 	}
-	return err
+
+	return r.DoJSON(req, &res)
+}
+
+// PostJSON executes HTTP POST request and decodes JSON response. It returns a StatusError on response codes other than HTTP 2xx.
+func (r *Helper) PostJSON(url string, body io.Reader, res interface{}) error {
+	req, err := New(http.MethodPost, url, body, JSONEncoding)
+	if err != nil {
+		return err
+	}
+
+	return r.DoJSON(req, &res)
 }

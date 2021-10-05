@@ -287,11 +287,9 @@ func (c *Easee) Enable(enable bool) error {
 		}
 
 		uri := fmt.Sprintf("%s/chargers/%s/settings", easee.API, c.charger)
-		resp, err := c.Post(uri, request.JSONContent, request.MarshalJSON(data))
-		if err != nil {
+		if err := c.PostJSON(uri, request.MarshalJSON(data), nil); err != nil {
 			return err
 		}
-		resp.Body.Close()
 	}
 
 	// resume/stop charger
@@ -301,7 +299,7 @@ func (c *Easee) Enable(enable bool) error {
 	}
 
 	uri := fmt.Sprintf("%s/chargers/%s/commands/%s", easee.API, c.charger, action)
-	_, err := c.Post(uri, request.JSONContent, nil)
+	err := c.PostJSON(uri, nil, nil)
 
 	return err
 }
@@ -320,10 +318,7 @@ func (c *Easee) MaxCurrentMillis(current float64) error {
 	}
 
 	uri := fmt.Sprintf("%s/chargers/%s/settings", easee.API, c.charger)
-	resp, err := c.Post(uri, request.JSONContent, request.MarshalJSON(data))
-	if err == nil {
-		resp.Body.Close()
-	}
+	err := c.PostJSON(uri, request.MarshalJSON(data), nil)
 
 	return err
 }
@@ -341,10 +336,7 @@ func (c *Easee) Phases1p3p(phases int) error {
 	}
 
 	uri := fmt.Sprintf("%s/chargers/%s/settings", easee.API, c.charger)
-	resp, err := c.Post(uri, request.JSONContent, request.MarshalJSON(data))
-	if err == nil {
-		resp.Body.Close()
-	}
+	err := c.PostJSON(uri, request.MarshalJSON(data), nil)
 
 	return err
 }

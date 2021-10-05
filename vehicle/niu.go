@@ -79,9 +79,7 @@ func (v *Niu) login() error {
 	}
 
 	uri := niu.AuthURI + "/v3/api/oauth2/token"
-	req, err := request.New(http.MethodPost, uri, strings.NewReader(data.Encode()), map[string]string{
-		"Content-Type": "application/x-www-form-urlencoded",
-	})
+	req, err := request.New(http.MethodPost, uri, strings.NewReader(data.Encode()), request.URLEncoding)
 
 	if err == nil {
 		var token niu.Token

@@ -3,7 +3,6 @@ package charger
 import (
 	"errors"
 	"fmt"
-	"net/http"
 	"strings"
 
 	"github.com/evcc-io/evcc/api"
@@ -224,10 +223,6 @@ func (c *Shelly) execGen2Cmd(method string, enable bool, res interface{}) error 
 		Method: method,
 	}
 
-	req, err := request.New(http.MethodPost, fmt.Sprintf("%s/%s", c.uri, method), request.MarshalJSON(data), request.JSONEncoding)
-	if err != nil {
-		return err
-	}
-
-	return c.DoJSON(req, &res)
+	uri := fmt.Sprintf("%s/%s", c.uri, method)
+	return c.PostJSON(uri, request.MarshalJSON(data), &res)
 }

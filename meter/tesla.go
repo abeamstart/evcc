@@ -3,7 +3,6 @@ package meter
 import (
 	"errors"
 	"fmt"
-	"net/http"
 	"net/http/cookiejar"
 	"net/url"
 	"strings"
@@ -104,12 +103,9 @@ func (m *Tesla) Login() error {
 		"password": m.password,
 	}
 
-	req, err := request.New(http.MethodPost, m.uri+powerwall.LoginURI, request.MarshalJSON(data), request.JSONEncoding)
-	if err == nil {
-		// use DoBody as it will close the response body
-		if _, err = m.DoBody(req); err != nil {
-			err = fmt.Errorf("login failed: %w", err)
-		}
+	err := m.PostJSON(m.uri+powerwall.LoginURI, request.MarshalJSON(data), nil)
+	if err != nil {
+		err = fmt.Errorf("login failed: %w", err)
 	}
 
 	return err
