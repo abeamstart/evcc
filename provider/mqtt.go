@@ -235,11 +235,9 @@ func (h *msgHandler) receive(payload string) {
 }
 
 func (h *msgHandler) hasValue() (string, error) {
-	elapsed := h.mux.LockWithTimeout()
 	defer h.mux.Unlock()
-
-	if elapsed > 0 {
-		return "", fmt.Errorf("%s outdated: %v", h.topic, elapsed.Truncate(time.Second))
+	if err := h.mux.LockWithTimeout(); err != nil {
+		return "", err
 	}
 
 	var err error

@@ -1,7 +1,6 @@
 package sma
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
@@ -51,11 +50,9 @@ func (d *Device) Values() (map[sunny.ValueID]interface{}, error) {
 	// ensure update loop was started
 	d.StartUpdateLoop()
 
-	elapsed := d.mux.LockWithTimeout()
 	defer d.mux.Unlock()
-
-	if elapsed > 0 {
-		return nil, fmt.Errorf("update timeout: %v", elapsed.Truncate(time.Second))
+	if err := d.mux.LockWithTimeout(); err != nil {
+		return nil, err
 	}
 
 	// return a copy of the map to avoid race conditions

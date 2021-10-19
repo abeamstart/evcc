@@ -1,6 +1,7 @@
 package util
 
 import (
+	"fmt"
 	"sync"
 	"time"
 )
@@ -25,7 +26,7 @@ func NewWaiter(timeout time.Duration, logInitialWait func()) *Waiter {
 }
 
 // Update is called when client has received data. Update resets the timeout counter.
-// It is client responsibility to ensure that the waiter is not locked when Update is called.
+// It is client responsibility to ensure that the waiter is locked when Update is called.
 func (p *Waiter) Update() {
 	p.updated = time.Now()
 }
@@ -38,6 +39,12 @@ func (p *Waiter) waitForInitialValue() {
 
 		// wait for initial update
 		waitStarted := time.Now()
+
+		// timeout := p.timeout
+		// if timeout == 0 {
+		// 	timeout = 10 * time.Second
+		// }
+
 		for p.updated.IsZero() {
 			p.Unlock()
 			time.Sleep(waitTimeout)
@@ -53,15 +60,15 @@ func (p *Waiter) waitForInitialValue() {
 }
 
 // LockWithTimeout waits for initial value and checks if update timeout has elapsed
-func (p *Waiter) LockWithTimeout() time.Duration {
+func (p *Waiter) LockWithTimeout() error {
 	p.Lock()
 
 	// waiting assumes lock acquired and returns with lock
 	p.once.Do(p.waitForInitialValue)
 
 	if elapsed := time.Since(p.updated); p.timeout != 0 && elapsed > p.timeout {
-		return elapsed
+		return fmt.Errorf("outdated: %v", elapsed.Truncate(time.Second))
 	}
 
-	return 0
+	return nil
 }
