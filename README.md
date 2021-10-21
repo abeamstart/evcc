@@ -40,6 +40,8 @@ EVCC is an extensible EV Charge Controller with PV integration implemented in [G
   - [Home Energy Management System](#home-energy-management-system)
   - [Flexible Energy Tariffs](#flexible-energy-tariffs)
   - [Notifications](#notifications)
+    - [Notification Events](#notification-events)
+    - [Notification Services](#notification-services)
 - [Plugins](#plugins)
   - [Modbus (read/write)](#modbus-readwrite)
   - [MQTT (read/write)](#mqtt-readwrite)
@@ -346,7 +348,7 @@ tariffs:
 
 ### Notifications
 
-EVCC supports status notifications using Telegram, PushOver and many more services as offered by [shoutrrr](https://containrrr.dev/shoutrrr) notification library. Configuration allows to define custom messages for several events and to setup the used notification service(s):
+EVCC supports status notifications using Telegram, PushOver and many more services as offered by the [shoutrrr](https://containrrr.dev/shoutrrr) notification library. Configuration allows to define custom messages for various events and send messages to different notification services:
 
 ```yaml
 messaging:
@@ -365,33 +367,30 @@ The available events are:
 - `connect`: Vehicle connect
 - `disconnect`: Vehicle disconnect
 
-Configuration is done according to the scheme of following example for the `start` event:
-
-```yaml
-    start: # charge start event
-      title: Charge started
-      msg: Started charging in "${mode}" mode
-```
+Event message configuration examples are documented in `evcc.dist.yaml`.
 
 #### Notification Services
 
-Following types of notification services can be configured:
+The following types of notification services can be configured:
 
 - `pushover`: [Pushover](https://pushover.net/)
 - `telegram`: [Telegram Messenger](https://telegram.org/)
-- `email`: Email (by using [shoutrrr](https://containrrr.dev/shoutrrr) service url: `smtp://username:password@host:port/?fromAddress=fromAddress&toAddresses=recipient1[,recipient2,...]`)
-- `shout`: Any service supported by [shoutrrr](https://containrrr.dev/shoutrrr) notification library (see below)
+- `shout`: Any service supported by [shoutrrr](https://containrrr.dev/shoutrrr) notification library:
+  - Email:
 
-Configuration examples can be found in `evcc.dist.yaml`.
+      ```yaml
+      - type: shout
+        uri: smtp://username:password@host:port/?fromAddress=fromAddress&toAddresses=recipient1[,recipient2,...]
+      ```
 
-Any [shoutrrr](https://containrrr.dev/shoutrrr) service is configured according to the following example for a [Gotify](https://gotify.net/) server:
+  - [Gotify](https://gotify.net/):
 
-```yaml
-  - type: shout
-    uri: gotify://gotify.example.com:443/AzyoeNS.D4iJLVa/?priority=1
-```
+      ```yaml
+      - type: shout
+        uri: gotify://gotify.example.com:443/AzyoeNS.D4iJLVa/?priority=1
+    ```
 
-Please refer to the [shoutrrr](https://containrrr.dev/shoutrrr) documentation for [supported services](https://containrrr.dev/shoutrrr/v0.5/services/overview/) and further details.
+  Please refer to the [shoutrrr](https://containrrr.dev/shoutrrr) documentation for [supported services](https://containrrr.dev/shoutrrr/v0.5/services/overview/) and further details.
 
 ## Plugins
 
