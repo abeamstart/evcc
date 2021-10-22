@@ -2,7 +2,6 @@ package internal
 
 import (
 	"encoding/json"
-	"fmt"
 	"time"
 
 	"golang.org/x/oauth2"
@@ -31,9 +30,9 @@ func (t *Token) UnmarshalJSON(data []byte) error {
 			t.Expiry = time.Now().Add(time.Second * time.Duration(s.ExpiresIn))
 		}
 
-		if s.Error != nil && s.ErrorDescription != nil {
-			err = fmt.Errorf("%s: %s", *s.Error, *s.ErrorDescription)
-		}
+		// if s.Error != nil && s.ErrorDescription != nil {
+		// 	err = oauth.Error{fmt.Sprintf("%s: %s", *s.Error, *s.ErrorDescription)}
+		// }
 	}
 
 	return err

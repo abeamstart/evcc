@@ -3,6 +3,7 @@ package vw
 import (
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
@@ -87,9 +88,9 @@ func (v *Identity) login(uri, user, password string) (url.Values, error) {
 	// POST identity.vwgroup.io/signin-service/v1/b7a5bb47-f875-47cf-ab83-2ba3bf6bb738@apps_vw-dilab_com/login/identifier
 	if err == nil {
 		data := url.Values(map[string][]string{
-			"_csrf":      {vars.Inputs["_csrf"]},
-			"relayState": {vars.Inputs["relayState"]},
-			"hmac":       {vars.Inputs["hmac"]},
+			"_csrf":      {vars.Inputs["_csrf"][0]},
+			"relayState": {vars.Inputs["relayState"][0]},
+			"hmac":       {vars.Inputs["hmac"][0]},
 			"email":      {user},
 		})
 
@@ -103,9 +104,9 @@ func (v *Identity) login(uri, user, password string) (url.Values, error) {
 	// POST identity.vwgroup.io/signin-service/v1/b7a5bb47-f875-47cf-ab83-2ba3bf6bb738@apps_vw-dilab_com/login/authenticate
 	if err == nil {
 		data := url.Values(map[string][]string{
-			"_csrf":      {vars.Inputs["_csrf"]},
-			"relayState": {vars.Inputs["relayState"]},
-			"hmac":       {vars.Inputs["hmac"]},
+			"_csrf":      {vars.Inputs["_csrf"][0]},
+			"relayState": {vars.Inputs["relayState"][0]},
+			"hmac":       {vars.Inputs["hmac"][0]},
 			"email":      {user},
 			"password":   {password},
 		})
@@ -115,7 +116,7 @@ func (v *Identity) login(uri, user, password string) (url.Values, error) {
 			resp.Body.Close()
 
 			if e := resp.Request.URL.Query().Get("error"); e != "" {
-				err = fmt.Errorf(e)
+				err = errors.New(e)
 			}
 
 			if u := resp.Request.URL.Query().Get("updated"); err == nil && u != "" {
@@ -133,9 +134,19 @@ func (v *Identity) login(uri, user, password string) (url.Values, error) {
 
 	var location *url.URL
 	if err == nil {
-		loc := strings.ReplaceAll(resp.Header.Get("Location"), "#", "?") //  convert to parseable url
-		if location, err = url.Parse(loc); err == nil {
-			return location.Query(), nil
+		loc := resp.Header.Get("Location")
+		if loc == "" {
+			// TODO handle resp before this if
+			if strings.Contains(resp.Request.URL.String(), "/consent/") {
+				resp, err = v.postAccess(resp.Request.URL.String(), resp.Body)
+			}
+
+			err = fmt.Errorf("missing callback uri")
+		} else {
+			loc = strings.ReplaceAll(loc, "#", "?") //  convert to parseable url
+			if location, err = url.Parse(loc); err == nil {
+				return location.Query(), nil
+			}
 		}
 	}
 
@@ -151,11 +162,56 @@ func (v *Identity) postTos(uri string) (*http.Response, error) {
 
 	if err == nil {
 		data := make(url.Values)
-		for k, v := range vars.Inputs {
-			data.Set(k, v)
+		for k, vv := range vars.Inputs {
+			for _, v := range vv {
+				data.Add(k, v)
+			}
 		}
 
 		uri := IdentityURI + vars.Action
+		resp, err = v.PostForm(uri, data)
+	}
+
+	return resp, err
+}
+
+// <form method="post" class="content">
+//     <link href="https://cdn.emea.vwapps.io/assets/be108820-9b1a-4906-a2e1-3f39150c43b7/production/emea/1634811328/styles/consent-screen.css" rel="stylesheet" />
+//     <div class="consent-screen" id="consent-screen">
+
+//         <div id="title" class="title">
+//             <h1 class="main-title">Allow access</h1>
+//             <div class="sub-title">We Connect / Car-Net would like to access the following information, provided this is available in your Volkswagen ID:</div>
+//         </div>
+
+//         <div class="scopes">
+//                 <input type="hidden" name="internalAndAlreadyConsentedScopes" value="openid" checked="true" />
+//                 <input type="hidden" name="internalAndAlreadyConsentedScopes" value="profile" checked="true" />
+//                 <input type="hidden" name="internalAndAlreadyConsentedScopes" value="mbb" checked="true" />
+//                 <input type="hidden" name="internalAndAlreadyConsentedScopes" value="cars" checked="true" />
+//                 <input type="hidden" name="internalAndAlreadyConsentedScopes" value="birthdate" checked="true" />
+//                 <input type="hidden" name="internalAndAlreadyConsentedScopes" value="nickname" checked="true" />
+//                 <input type="hidden" name="internalAndAlreadyConsentedScopes" value="address" checked="true" />
+//                 <input type="hidden" name="internalAndAlreadyConsentedScopesHmac" value="cc93300de16cd7ed20ab7226e6a5767f951a32b758daae2d1492a3fbb9880493" checked="true" />
+//             <div class="scope-section mandatory-scope-section">
+
+//                 <ul class="scope-list">
+
+TODO handle resp before this if                        <li>
+
+// func (v *Identity) postAccess(uri string, r io.Reader) (*http.Response, error) {
+// 	var resp *http.Response
+	vars, err := FormValues(r, "form.content")
+
+	if err == nil {
+		data := make(url.Values)
+		for k, vv := range vars.Inputs {
+			for _, v := range vv {
+				data.Add(k, v)
+			}
+		}
+
+		// uri := IdentityURI + vars.Action
 		resp, err = v.PostForm(uri, data)
 	}
 

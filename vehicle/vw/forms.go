@@ -1,7 +1,9 @@
 package vw
 
 import (
+	"bytes"
 	"errors"
+	"fmt"
 	"io"
 
 	"github.com/PuerkitoBio/goquery"
@@ -10,14 +12,17 @@ import (
 // FormVars holds HTML form input values required for login
 type FormVars struct {
 	Action string
-	Inputs map[string]string
+	Inputs map[string][]string
 }
 
 // FormValues extracts FormVars from given HTML document
 func FormValues(reader io.Reader, id string) (FormVars, error) {
-	vars := FormVars{Inputs: make(map[string]string)}
+	vars := FormVars{Inputs: make(map[string][]string)}
 
-	doc, err := goquery.NewDocumentFromReader(reader)
+	data, _ := io.ReadAll(reader)
+	fmt.Println(string(data))
+
+	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(data))
 	if err == nil {
 		// only interested in meta tag?
 		if meta := doc.Find("meta[name=_csrf]"); id == "meta" {
@@ -29,7 +34,7 @@ func FormValues(reader io.Reader, id string) (FormVars, error) {
 			if !exists {
 				return vars, errors.New("meta attribute not found")
 			}
-			vars.Inputs["_csrf"] = csrf
+			vars.Inputs["_csrf"] = []string{csrf}
 			return vars, nil
 		}
 
@@ -40,13 +45,15 @@ func FormValues(reader io.Reader, id string) (FormVars, error) {
 
 		action, exists := form.Attr("action")
 		if !exists {
-			return vars, errors.New("form attribute not found")
+			// return vars, errors.New("form attribute not found")
 		}
 		vars.Action = action
 
 		form.Find("input").Each(func(_ int, el *goquery.Selection) {
 			if name, ok := el.Attr("name"); ok {
-				vars.Inputs[name], _ = el.Attr("value")
+				if val, ok := el.Attr("value"); ok {
+					vars.Inputs[name] = append(vars.Inputs[name], val)
+				}
 			}
 		})
 	}

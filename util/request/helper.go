@@ -51,7 +51,8 @@ func (r *Helper) GetBody(url string) ([]byte, error) {
 // decodeJSON reads HTTP response and decodes JSON body if error is nil
 func decodeJSON(resp *http.Response, res interface{}) error {
 	if err := ResponseError(resp); err != nil {
-		_ = json.NewDecoder(resp.Body).Decode(&res)
+		err2 := json.NewDecoder(resp.Body).Decode(&res)
+		_ = err2 // TODO expose content errors
 		return err
 	}
 
