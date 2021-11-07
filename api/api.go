@@ -103,6 +103,11 @@ type Identifier interface {
 	Identify() (string, error)
 }
 
+// Unlocker unlocks a locked charger by providing credentials
+type Unlocker interface {
+	Unlock(key string) error
+}
+
 // Vehicle represents the EV and it's battery
 type Vehicle interface {
 	Battery

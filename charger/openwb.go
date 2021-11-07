@@ -22,6 +22,7 @@ type OpenWB struct {
 	totalEnergyG  func() (float64, error)
 	currentsG     []func() (float64, error)
 	phasesS       func(int64) error
+	rfidS         func(string) error
 	socG          func() (float64, error)
 }
 
@@ -104,6 +105,9 @@ func NewOpenWB(log *util.Logger, mqttconf mqtt.Config, id int, topic string, p1p
 	maxcurrentS := provider.NewMqtt(log, client,
 		fmt.Sprintf("%s/set/lp%d/%s", topic, id, openwb.MaxCurrentTopic),
 		1, timeout).IntSetter("maxcurrent")
+	rfidS := provider.NewMqtt(log, client,
+		fmt.Sprintf("%s/set/lp%d/%s", topic, id, openwb.RfidTopic),
+		1, timeout).StringSetter("rfid")
 
 	// meter getters
 	currentPowerG := floatG(fmt.Sprintf("%s/lp/%d/%s", topic, id, openwb.ChargePowerTopic))
@@ -125,6 +129,7 @@ func NewOpenWB(log *util.Logger, mqttconf mqtt.Config, id int, topic string, p1p
 		currentPowerG: currentPowerG,
 		totalEnergyG:  totalEnergyG,
 		currentsG:     currentsG,
+		rfidS:         rfidS,
 	}
 
 	// optional capabilities
@@ -177,6 +182,13 @@ func (m *OpenWB) Currents() (float64, float64, float64, error) {
 	}
 
 	return currents[0], currents[1], currents[2], nil
+}
+
+var _ api.Unlocker = (*OpenWB)(nil)
+
+// Unlock implements the api.Unlocker interface
+func (c *OpenWB) Unlock(key string) error {
+	return c.rfidS(key)
 }
 
 // phases implements the api.ChargePhases interface
