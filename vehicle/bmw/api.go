@@ -3,6 +3,7 @@ package bmw
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/evcc-io/evcc/util"
@@ -58,10 +59,14 @@ func (v *API) Vehicles() ([]string, error) {
 	return vehicles, err
 }
 
+func init() {
+	util.RedactHook = nil
+}
+
 // Status implements the /user/vehicles/<vin>/status api
 func (v *API) Status(vin string) (VehicleStatus, error) {
 	var resp VehiclesStatusResponse
-	uri := fmt.Sprintf("%s/eadrax-vcs/v1/vehicles?apptimezone=60&appDateTime=%d&vin=%s", CocoApiURI, time.Now().Unix(), vin)
+	uri := fmt.Sprintf("%s/eadrax-vcs/v1/vehicles?apptimezone=60&appDateTime=%d", CocoApiURI, time.Now().Unix())
 
 	req, err := request.New(http.MethodGet, uri, nil, map[string]string{
 		"X-User-Agent": XUserAgent,
@@ -70,9 +75,31 @@ func (v *API) Status(vin string) (VehicleStatus, error) {
 		err = v.DoJSON(req, &resp)
 	}
 
+	v.Images(vin)
+
 	if l := len(resp); l != 1 {
 		return VehicleStatus{}, fmt.Errorf("unexpected length: %d", l)
 	}
 
 	return resp[0], err
+}
+
+// Images implements the /user/vehicles/<vin>/status api
+func (v *API) Images(vin string) (VehicleStatus, error) {
+	view := "VehicleStatus"
+	uri := fmt.Sprintf("%s/eadrax-ics/v3/presentation/vehicles/%s/images?carView=%s", CocoApiURI, vin, view)
+
+	req, err := request.New(http.MethodGet, uri, nil, map[string]string{
+		"X-User-Agent": XUserAgent,
+		"Accept":       "image/png",
+	})
+
+	var resp *http.Response
+	if err == nil {
+		resp, err = v.Do(req)
+	}
+	_ = resp
+	os.Exit(1)
+
+	return VehicleStatus{}, err
 }
