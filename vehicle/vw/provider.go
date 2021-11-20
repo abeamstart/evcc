@@ -13,7 +13,7 @@ import (
 type Provider struct {
 	chargerG func() (interface{}, error)
 	climateG func() (interface{}, error)
-	action   func(action, value string) error
+	action   func(action string, value interface{}) error
 }
 
 // NewProvider provides the evcc vehicle api provider
@@ -25,7 +25,7 @@ func NewProvider(api *API, vin string, cache time.Duration) *Provider {
 		climateG: provider.NewCached(func() (interface{}, error) {
 			return api.Climater(vin)
 		}, cache).InterfaceGetter(),
-		action: func(action, value string) error {
+		action: func(action string, value interface{}) error {
 			return api.Action(vin, action, value)
 		},
 	}
@@ -132,4 +132,11 @@ var _ api.VehicleStopCharge = (*Provider)(nil)
 // StopCharge implements the api.VehicleStopCharge interface
 func (v *Provider) StopCharge() error {
 	return v.action(ActionCharge, ActionChargeStop)
+}
+
+var _ api.ChargeCurrent = (*Provider)(nil)
+
+// MaxCurrent implements the api.ChargeCurrent interface
+func (v *Provider) MaxCurrent(current int64) error {
+	return v.action(ActionMaxCurrent, current)
 }

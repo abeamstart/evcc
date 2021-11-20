@@ -105,7 +105,7 @@ const (
 	ActionCharge      = "batterycharge"
 	ActionChargeStart = "start"
 	ActionChargeStop  = "stop"
-	ActionCurrent     = "maxChargeCurrent"
+	ActionMaxCurrent  = "maxChargeCurrent"
 )
 
 type actionDefinition struct {
@@ -120,7 +120,7 @@ var actionDefinitions = map[string]actionDefinition{
 		"application/vnd.vwg.mbb.ChargerAction_v1_0_0+xml",
 		`<?xml version="1.0" encoding="UTF-8" ?><action><type>%s</type></action>`,
 	},
-	ActionCurrent: {
+	ActionMaxCurrent: {
 		"charger/actions",
 		"application/vnd.vwg.mbb.ChargerAction_v1_0_0+xml",
 		`<?xml version="1.0" encoding="UTF-8" ?><action><maxChargeCurrent>%d</maxChargeCurrent></action>`,

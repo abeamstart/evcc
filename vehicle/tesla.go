@@ -230,3 +230,17 @@ func (v *Tesla) StopCharge() error {
 
 	return err
 }
+
+var _ api.ChargeCurrent = (*Tesla)(nil)
+
+// MaxCurrent implements the api.ChargeCurrent interface
+func (v *Tesla) MaxCurrent(current int64) error {
+	err := v.vehicle.SetChargingAmps(int(current))
+
+	// ignore sleeping vehicle
+	if err != nil && err.Error() == "408 Request Timeout" {
+		err = nil
+	}
+
+	return err
+}
