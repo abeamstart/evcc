@@ -77,8 +77,13 @@ type ChargeState interface {
 // Charger is able to provide current charging status and enable/disable charging
 type Charger interface {
 	ChargeState
+	ChargeCurrent
 	Enabled() (bool, error)
 	Enable(enable bool) error
+}
+
+// ChargeCurrent provides standard charger current control
+type ChargeCurrent interface {
 	MaxCurrent(current int64) error
 }
 

@@ -105,28 +105,36 @@ const (
 	ActionCharge      = "batterycharge"
 	ActionChargeStart = "start"
 	ActionChargeStop  = "stop"
+	ActionCurrent     = "maxChargeCurrent"
 )
 
 type actionDefinition struct {
+	path        string
 	contentType string
-	appendix    string
+	template    string
 }
 
 var actionDefinitions = map[string]actionDefinition{
 	ActionCharge: {
-		"application/vnd.vwg.mbb.ChargerAction_v1_0_0+xml",
 		"charger/actions",
+		"application/vnd.vwg.mbb.ChargerAction_v1_0_0+xml",
+		`<?xml version="1.0" encoding="UTF-8" ?><action><type>%s</type></action>`,
+	},
+	ActionCurrent: {
+		"charger/actions",
+		"application/vnd.vwg.mbb.ChargerAction_v1_0_0+xml",
+		`<?xml version="1.0" encoding="UTF-8" ?><action><maxChargeCurrent>%d</maxChargeCurrent></action>`,
 	},
 }
 
 // Action implements vehicle actions
-func (v *API) Action(vin, action, value string) error {
+func (v *API) Action(vin, action string, value interface{}) error {
 	def := actionDefinitions[action]
 
-	uri := fmt.Sprintf("%s/bs/%s/v1/%s/%s/vehicles/%s/%s", v.baseURI, action, v.brand, v.country, vin, def.appendix)
-	body := "<?xml version=\"1.0\" encoding=\"UTF-8\" ?><action><type>" + value + "</type></action>"
+	uri := fmt.Sprintf("%s/bs/%s/v1/%s/%s/vehicles/%s/%s", v.baseURI, action, v.brand, v.country, vin, def.path)
+	data := fmt.Sprintf(def.template, value)
 
-	req, err := request.New(http.MethodPost, uri, strings.NewReader(body), map[string]string{
+	req, err := request.New(http.MethodPost, uri, strings.NewReader(data), map[string]string{
 		"Content-type": def.contentType,
 	})
 
