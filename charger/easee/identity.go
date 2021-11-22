@@ -59,8 +59,6 @@ func TokenSource(log *util.Logger, user, password string) (oauth2.TokenSource, e
 		var token Token
 		if err = c.DoJSON(req, &token); err == nil {
 			tok := token.AsOAuth2Token()
-			tok.Expiry = time.Now().Add(3 * time.Second)
-			println("-- expire")
 			c.TokenSource = oauth.RefreshTokenSource(tok, c)
 		}
 	}
@@ -77,8 +75,6 @@ func (c *tokenSource) RefreshToken(token *oauth2.Token) (*oauth2.Token, error) {
 		RefreshToken: token.RefreshToken,
 	}
 
-	println("-- refresh")
-
 	uri := fmt.Sprintf("%s/%s", API, "accounts/refresh_token")
 	req, err := request.New(http.MethodPost, uri, request.MarshalJSON(data), request.JSONEncoding)
 
@@ -87,8 +83,6 @@ func (c *tokenSource) RefreshToken(token *oauth2.Token) (*oauth2.Token, error) {
 		var refreshed Token
 		if err = c.DoJSON(req, &refreshed); err == nil {
 			res = refreshed.AsOAuth2Token()
-			println("-- expire")
-			res.Expiry = time.Now().Add(3 * time.Second)
 		}
 	}
 
