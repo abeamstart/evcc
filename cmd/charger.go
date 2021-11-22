@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"time"
+
 	"github.com/evcc-io/evcc/api"
 	"github.com/evcc-io/evcc/server"
 	"github.com/evcc-io/evcc/util"
@@ -48,4 +50,6 @@ func runCharger(cmd *cobra.Command, args []string) {
 	for name, v := range chargers {
 		d.DumpWithHeader(name, v)
 	}
+
+	time.Sleep(time.Minute)
 }
