@@ -116,7 +116,7 @@ func NewEasee(user, password, charger string, circuit int, cache time.Duration) 
 	client, err := signalr.NewClient(context.Background(),
 		signalr.WithAutoReconnect(c.connect(ts)),
 		signalr.WithReceiver(c),
-		signalr.Logger(easee.SignalrLogger(c.log.TRACE), false),
+		signalr.Logger(easee.SignalrLogger(c.log.TRACE), true),
 	)
 
 	if err == nil {
@@ -130,6 +130,8 @@ func NewEasee(user, password, charger string, circuit int, cache time.Duration) 
 	if err == nil {
 		err = <-client.Send("SubscribeWithCurrentState", c.charger, true)
 	}
+
+	time.Sleep(time.Second)
 
 	return c, err
 }
