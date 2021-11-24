@@ -13,12 +13,6 @@ import (
 )
 
 const (
-	VehiclesURL     = "vehicles"
-	StatusURL       = "vehicles/%s/status"
-	StatusLatestURL = "vehicles/%s/status/latest"
-)
-
-const (
 	resOK = "S" // auth fail: F
 )
 
@@ -29,18 +23,21 @@ var ErrAuthFail = errors.New("authorization failed")
 // Based on https://github.com/Hacksore/bluelinky.
 type API struct {
 	*request.Helper
-	baseURI string
+	baseURI  string
+	identity Requester
 }
 
 type Requester interface {
 	Request(*http.Request) error
+	DeviceID() string
 }
 
 // New creates a new BlueLink API
 func NewAPI(log *util.Logger, baseURI string, identity Requester, cache time.Duration) *API {
 	v := &API{
-		Helper:  request.NewHelper(log),
-		baseURI: strings.TrimSuffix(baseURI, "/api/v1/spa") + "/api/v1/spa",
+		Helper:   request.NewHelper(log),
+		baseURI:  strings.TrimSuffix(baseURI, "/api/v1/spa") + "/api",
+		identity: identity,
 	}
 
 	// api is unbelievably slow when retrieving status
@@ -61,7 +58,7 @@ type Vehicle struct {
 func (v *API) Vehicles() ([]Vehicle, error) {
 	var res VehiclesResponse
 
-	uri := fmt.Sprintf("%s/%s", v.baseURI, VehiclesURL)
+	uri := fmt.Sprintf("%s/v1/spa/vehicles", v.baseURI)
 	err := v.GetJSON(uri, &res)
 
 	return res.ResMsg.Vehicles, err
@@ -71,7 +68,7 @@ func (v *API) Vehicles() ([]Vehicle, error) {
 func (v *API) StatusLatest(vid string) (StatusLatestResponse, error) {
 	var res StatusLatestResponse
 
-	uri := fmt.Sprintf("%s/%s", v.baseURI, fmt.Sprintf(StatusLatestURL, vid))
+	uri := fmt.Sprintf("%s/v1/spa/vehicles/%s/status/latest", v.baseURI, vid)
 	err := v.GetJSON(uri, &res)
 	if err == nil && res.RetCode != resOK {
 		err = fmt.Errorf("unexpected response: %s", res.RetCode)
@@ -84,11 +81,42 @@ func (v *API) StatusLatest(vid string) (StatusLatestResponse, error) {
 func (v *API) StatusPartial(vid string) (StatusResponse, error) {
 	var res StatusResponse
 
-	uri := fmt.Sprintf("%s/%s", v.baseURI, fmt.Sprintf(StatusURL, vid))
+	uri := fmt.Sprintf("%s/v1/spa/vehicles/%s/status", v.baseURI, vid)
 	err := v.GetJSON(uri, &res)
 	if err == nil && res.RetCode != resOK {
 		err = fmt.Errorf("unexpected response: %s", res.RetCode)
 	}
 
 	return res, err
+}
+
+const (
+	ActionCharge      = "charge"
+	ActionChargeStart = "start"
+	ActionChargeStop  = "stop"
+)
+
+// Action implements vehicle actions
+// TODO add pin
+func (v *API) Action(vid, action, value string) error {
+	uri := fmt.Sprintf("%s/v2/spa/vehicles/%s/control/%s", v.baseURI, vid, action)
+
+	body := struct {
+		Action   string `json:"action"`
+		DeviceId string `json:"deviceId"`
+	}{
+		Action:   value,
+		DeviceId: v.identity.DeviceID(),
+	}
+
+	req, err := request.New(http.MethodPost, uri, request.MarshalJSON(body), request.JSONEncoding)
+
+	if err == nil {
+		var resp *http.Response
+		if resp, err = v.Do(req); err == nil {
+			resp.Body.Close()
+		}
+	}
+
+	return err
 }

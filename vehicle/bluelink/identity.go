@@ -355,6 +355,11 @@ func (v *Identity) Login(user, password string) (err error) {
 	return err
 }
 
+// DeviceID returns the device ID
+func (v *Identity) DeviceID() string {
+	return v.deviceID
+}
+
 // Request decorates requests with authorization headers
 func (v *Identity) Request(req *http.Request) error {
 	token, err := v.Token()
@@ -367,7 +372,6 @@ func (v *Identity) Request(req *http.Request) error {
 		"ccsp-device-id":      v.deviceID,
 		"ccsp-application-id": v.config.CCSPApplicationID,
 		"offset":              "1",
-		"User-Agent":          "okhttp/3.10.0",
 		"Stamp":               v.stamp(),
 	} {
 		req.Header.Set(k, v)
