@@ -187,8 +187,9 @@ func run(cmd *cobra.Command, args []string) {
 
 	if conf.CloudConnect {
 		host := util.Getenv("GRPC_CC_URI", cloud.Host)
+		// host = "localhost:50005"
 		log.INFO.Println("connecting cloud at:", host)
-		conn, err := cloud.Connection(host)
+		conn, err := cloud.Connection2(host)
 		if err != nil {
 			log.FATAL.Fatal(err)
 		}

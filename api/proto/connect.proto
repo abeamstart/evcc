@@ -2,19 +2,24 @@ syntax = "proto3";
 
 // protoc proto/connect.proto --go_out=. --go-grpc_out=.
 
-import "google/protobuf/empty.proto";
-
 option go_package = "proto/pb";
 
-service StreamService {
-	rpc FetchResponse (Request) returns (stream Response) {}
-	rpc SendUpdate (Request) returns(google.protobuf.Empty) {}
+service CloudConnectService {
+	rpc SubscribeBackendRequest (SubscribeRequest) returns (stream BackendRequest) {}
+	rpc SendEdgeUpdate (UpdateRequest) returns(UpdateResponse) {}
 }
 
-message Request {
-	int32 id = 1;
-}
+message SubscribeRequest {}
 
-message Response {
+message BackendRequest {
 	string result = 1;
 }
+
+message UpdateRequest {
+	string result = 1;
+	int32 loadpoint = 2;
+	string key = 3;
+	bytes val = 4;
+}
+
+message UpdateResponse {}

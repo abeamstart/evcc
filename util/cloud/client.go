@@ -58,3 +58,16 @@ func Connection(uri string) (*grpc.ClientConn, error) {
 
 	return conn, err
 }
+
+func Connection2(uri string) (*grpc.ClientConn, error) {
+	transportOption := grpc.WithInsecure()
+	if !strings.HasPrefix(uri, "localhost") {
+		tlsConfig, err := loadTLSCredentials()
+		if err != nil {
+			return nil, err
+		}
+
+		transportOption = grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig))
+	}
+	return grpc.Dial(uri, transportOption)
+}

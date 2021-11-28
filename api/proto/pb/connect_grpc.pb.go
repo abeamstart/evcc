@@ -7,7 +7,6 @@ import (
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
-	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -15,28 +14,28 @@ import (
 // Requires gRPC-Go v1.32.0 or later.
 const _ = grpc.SupportPackageIsVersion7
 
-// StreamServiceClient is the client API for StreamService service.
+// CloudConnectServiceClient is the client API for CloudConnectService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type StreamServiceClient interface {
-	FetchResponse(ctx context.Context, in *Request, opts ...grpc.CallOption) (StreamService_FetchResponseClient, error)
-	SendUpdate(ctx context.Context, in *Request, opts ...grpc.CallOption) (*emptypb.Empty, error)
+type CloudConnectServiceClient interface {
+	SubscribeBackendRequest(ctx context.Context, in *SubscribeRequest, opts ...grpc.CallOption) (CloudConnectService_SubscribeBackendRequestClient, error)
+	SendEdgeUpdate(ctx context.Context, in *UpdateRequest, opts ...grpc.CallOption) (*UpdateResponse, error)
 }
 
-type streamServiceClient struct {
+type cloudConnectServiceClient struct {
 	cc grpc.ClientConnInterface
 }
 
-func NewStreamServiceClient(cc grpc.ClientConnInterface) StreamServiceClient {
-	return &streamServiceClient{cc}
+func NewCloudConnectServiceClient(cc grpc.ClientConnInterface) CloudConnectServiceClient {
+	return &cloudConnectServiceClient{cc}
 }
 
-func (c *streamServiceClient) FetchResponse(ctx context.Context, in *Request, opts ...grpc.CallOption) (StreamService_FetchResponseClient, error) {
-	stream, err := c.cc.NewStream(ctx, &StreamService_ServiceDesc.Streams[0], "/StreamService/FetchResponse", opts...)
+func (c *cloudConnectServiceClient) SubscribeBackendRequest(ctx context.Context, in *SubscribeRequest, opts ...grpc.CallOption) (CloudConnectService_SubscribeBackendRequestClient, error) {
+	stream, err := c.cc.NewStream(ctx, &CloudConnectService_ServiceDesc.Streams[0], "/CloudConnectService/SubscribeBackendRequest", opts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &streamServiceFetchResponseClient{stream}
+	x := &cloudConnectServiceSubscribeBackendRequestClient{stream}
 	if err := x.ClientStream.SendMsg(in); err != nil {
 		return nil, err
 	}
@@ -46,119 +45,119 @@ func (c *streamServiceClient) FetchResponse(ctx context.Context, in *Request, op
 	return x, nil
 }
 
-type StreamService_FetchResponseClient interface {
-	Recv() (*Response, error)
+type CloudConnectService_SubscribeBackendRequestClient interface {
+	Recv() (*BackendRequest, error)
 	grpc.ClientStream
 }
 
-type streamServiceFetchResponseClient struct {
+type cloudConnectServiceSubscribeBackendRequestClient struct {
 	grpc.ClientStream
 }
 
-func (x *streamServiceFetchResponseClient) Recv() (*Response, error) {
-	m := new(Response)
+func (x *cloudConnectServiceSubscribeBackendRequestClient) Recv() (*BackendRequest, error) {
+	m := new(BackendRequest)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
 	return m, nil
 }
 
-func (c *streamServiceClient) SendUpdate(ctx context.Context, in *Request, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, "/StreamService/SendUpdate", in, out, opts...)
+func (c *cloudConnectServiceClient) SendEdgeUpdate(ctx context.Context, in *UpdateRequest, opts ...grpc.CallOption) (*UpdateResponse, error) {
+	out := new(UpdateResponse)
+	err := c.cc.Invoke(ctx, "/CloudConnectService/SendEdgeUpdate", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-// StreamServiceServer is the server API for StreamService service.
-// All implementations must embed UnimplementedStreamServiceServer
+// CloudConnectServiceServer is the server API for CloudConnectService service.
+// All implementations must embed UnimplementedCloudConnectServiceServer
 // for forward compatibility
-type StreamServiceServer interface {
-	FetchResponse(*Request, StreamService_FetchResponseServer) error
-	SendUpdate(context.Context, *Request) (*emptypb.Empty, error)
-	mustEmbedUnimplementedStreamServiceServer()
+type CloudConnectServiceServer interface {
+	SubscribeBackendRequest(*SubscribeRequest, CloudConnectService_SubscribeBackendRequestServer) error
+	SendEdgeUpdate(context.Context, *UpdateRequest) (*UpdateResponse, error)
+	mustEmbedUnimplementedCloudConnectServiceServer()
 }
 
-// UnimplementedStreamServiceServer must be embedded to have forward compatible implementations.
-type UnimplementedStreamServiceServer struct {
+// UnimplementedCloudConnectServiceServer must be embedded to have forward compatible implementations.
+type UnimplementedCloudConnectServiceServer struct {
 }
 
-func (UnimplementedStreamServiceServer) FetchResponse(*Request, StreamService_FetchResponseServer) error {
-	return status.Errorf(codes.Unimplemented, "method FetchResponse not implemented")
+func (UnimplementedCloudConnectServiceServer) SubscribeBackendRequest(*SubscribeRequest, CloudConnectService_SubscribeBackendRequestServer) error {
+	return status.Errorf(codes.Unimplemented, "method SubscribeBackendRequest not implemented")
 }
-func (UnimplementedStreamServiceServer) SendUpdate(context.Context, *Request) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SendUpdate not implemented")
+func (UnimplementedCloudConnectServiceServer) SendEdgeUpdate(context.Context, *UpdateRequest) (*UpdateResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SendEdgeUpdate not implemented")
 }
-func (UnimplementedStreamServiceServer) mustEmbedUnimplementedStreamServiceServer() {}
+func (UnimplementedCloudConnectServiceServer) mustEmbedUnimplementedCloudConnectServiceServer() {}
 
-// UnsafeStreamServiceServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to StreamServiceServer will
+// UnsafeCloudConnectServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to CloudConnectServiceServer will
 // result in compilation errors.
-type UnsafeStreamServiceServer interface {
-	mustEmbedUnimplementedStreamServiceServer()
+type UnsafeCloudConnectServiceServer interface {
+	mustEmbedUnimplementedCloudConnectServiceServer()
 }
 
-func RegisterStreamServiceServer(s grpc.ServiceRegistrar, srv StreamServiceServer) {
-	s.RegisterService(&StreamService_ServiceDesc, srv)
+func RegisterCloudConnectServiceServer(s grpc.ServiceRegistrar, srv CloudConnectServiceServer) {
+	s.RegisterService(&CloudConnectService_ServiceDesc, srv)
 }
 
-func _StreamService_FetchResponse_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(Request)
+func _CloudConnectService_SubscribeBackendRequest_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(SubscribeRequest)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}
-	return srv.(StreamServiceServer).FetchResponse(m, &streamServiceFetchResponseServer{stream})
+	return srv.(CloudConnectServiceServer).SubscribeBackendRequest(m, &cloudConnectServiceSubscribeBackendRequestServer{stream})
 }
 
-type StreamService_FetchResponseServer interface {
-	Send(*Response) error
+type CloudConnectService_SubscribeBackendRequestServer interface {
+	Send(*BackendRequest) error
 	grpc.ServerStream
 }
 
-type streamServiceFetchResponseServer struct {
+type cloudConnectServiceSubscribeBackendRequestServer struct {
 	grpc.ServerStream
 }
 
-func (x *streamServiceFetchResponseServer) Send(m *Response) error {
+func (x *cloudConnectServiceSubscribeBackendRequestServer) Send(m *BackendRequest) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func _StreamService_SendUpdate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Request)
+func _CloudConnectService_SendEdgeUpdate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(StreamServiceServer).SendUpdate(ctx, in)
+		return srv.(CloudConnectServiceServer).SendEdgeUpdate(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/StreamService/SendUpdate",
+		FullMethod: "/CloudConnectService/SendEdgeUpdate",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(StreamServiceServer).SendUpdate(ctx, req.(*Request))
+		return srv.(CloudConnectServiceServer).SendEdgeUpdate(ctx, req.(*UpdateRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-// StreamService_ServiceDesc is the grpc.ServiceDesc for StreamService service.
+// CloudConnectService_ServiceDesc is the grpc.ServiceDesc for CloudConnectService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
-var StreamService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "StreamService",
-	HandlerType: (*StreamServiceServer)(nil),
+var CloudConnectService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "CloudConnectService",
+	HandlerType: (*CloudConnectServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "SendUpdate",
-			Handler:    _StreamService_SendUpdate_Handler,
+			MethodName: "SendEdgeUpdate",
+			Handler:    _CloudConnectService_SendEdgeUpdate_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
 		{
-			StreamName:    "FetchResponse",
-			Handler:       _StreamService_FetchResponse_Handler,
+			StreamName:    "SubscribeBackendRequest",
+			Handler:       _CloudConnectService_SubscribeBackendRequest_Handler,
 			ServerStreams: true,
 		},
 	},
