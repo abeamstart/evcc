@@ -19,6 +19,7 @@ type config struct {
 	URI          string
 	Log          string
 	SponsorToken string
+	CloudConnect bool
 	Metrics      bool
 	Profile      bool
 	Levels       map[string]string

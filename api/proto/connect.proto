@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+// protoc proto/connect.proto --go_out=. --go-grpc_out=.
+
+import "google/protobuf/empty.proto";
+
+option go_package = "proto/pb";
+
+service StreamService {
+	rpc FetchResponse (Request) returns (stream Response) {}
+	rpc SendUpdate (Request) returns(google.protobuf.Empty) {}
+}
+
+message Request {
+	int32 id = 1;
+}
+
+message Response {
+	string result = 1;
+}
