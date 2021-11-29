@@ -13,6 +13,7 @@ import (
 	"github.com/evcc-io/evcc/server/updater"
 	"github.com/evcc-io/evcc/util"
 	"github.com/evcc-io/evcc/util/cloud"
+	"github.com/evcc-io/evcc/util/cloud/edge"
 	"github.com/evcc-io/evcc/util/pipe"
 	"github.com/evcc-io/evcc/util/sponsor"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -191,7 +192,7 @@ func run(cmd *cobra.Command, args []string) {
 		log.INFO.Println("connecting cloud at:", host)
 		conn, err := cloud.Connection(host)
 		if err == nil {
-			err = cloud.ConnectToBackend(conn, site, tee.Attach())
+			err = edge.ConnectToBackend(conn, site, tee.Attach())
 		}
 
 		if err != nil {

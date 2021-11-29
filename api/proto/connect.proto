@@ -19,10 +19,7 @@ message EdgeEnvironment {
 	int32 loadpoints = 1;
 }
 
-message EdgeRequest {
-	uint64 id = 1;
-	int32 api = 2;
-	int32 loadpoint = 3;
+message Payload {
 	string stringval = 4;
 	double floatval = 5;
 	bool boolval = 6;
@@ -31,16 +28,18 @@ message EdgeRequest {
 	google.protobuf.Duration durationval = 9;
 }
 
+message EdgeRequest {
+	uint64 id = 1;
+	int32 api = 2;
+	int32 loadpoint = 3;
+	Payload payload = 4;
+}
+
 message EdgeResponse {
 	uint64 id = 1;
 	string error = 2;
-	bool _ = 3;
-	string stringval = 4;
-	double floatval = 5;
-	bool boolval = 6;
-	int64 intval = 7;
-	google.protobuf.Timestamp timeval = 8;
-	google.protobuf.Duration durationval = 9;
+	int32 loadpoint = 3;
+	Payload payload = 4;
 }
 
 message UpdateRequest {

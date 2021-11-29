@@ -50,7 +50,7 @@ func (lp *Adapter) Name() string {
 	if err != nil {
 		return ""
 	}
-	return resp.Stringval
+	return resp.Payload.Stringval
 }
 
 func (lp *Adapter) HasChargeMeter() bool {
@@ -58,7 +58,7 @@ func (lp *Adapter) HasChargeMeter() bool {
 	if err != nil {
 		return false
 	}
-	return resp.Boolval
+	return resp.Payload.Boolval
 
 }
 
@@ -67,7 +67,7 @@ func (lp *Adapter) GetStatus() api.ChargeStatus {
 	if err != nil {
 		return ""
 	}
-	return api.ChargeStatus(resp.Stringval)
+	return api.ChargeStatus(resp.Payload.Stringval)
 }
 
 func (lp *Adapter) GetMode() api.ChargeMode {
@@ -75,11 +75,11 @@ func (lp *Adapter) GetMode() api.ChargeMode {
 	if err != nil {
 		return ""
 	}
-	return api.ChargeMode(resp.Stringval)
+	return api.ChargeMode(resp.Payload.Stringval)
 }
 
 func (lp *Adapter) SetMode(val api.ChargeMode) {
-	_, err := lp.send(cloud.RemoteControl, &pb.EdgeRequest{Stringval: string(val)})
+	_, err := lp.send(cloud.RemoteControl, &pb.EdgeRequest{Payload: &pb.Payload{Stringval: string(val)}})
 	_ = err
 }
 
@@ -88,11 +88,11 @@ func (lp *Adapter) GetTargetSoC() int {
 	if err != nil {
 		return 0
 	}
-	return int(resp.Intval)
+	return int(resp.Payload.Intval)
 }
 
 func (lp *Adapter) SetTargetSoC(val int) error {
-	_, err := lp.send(cloud.SetTargetSoC, &pb.EdgeRequest{Intval: int64(val)})
+	_, err := lp.send(cloud.SetTargetSoC, &pb.EdgeRequest{Payload: &pb.Payload{Intval: int64(val)}})
 	return err
 }
 
@@ -101,11 +101,11 @@ func (lp *Adapter) GetMinSoC() int {
 	if err != nil {
 		return 0
 	}
-	return int(resp.Intval)
+	return int(resp.Payload.Intval)
 }
 
 func (lp *Adapter) SetMinSoC(val int) error {
-	_, err := lp.send(cloud.SetMinSoC, &pb.EdgeRequest{Intval: int64(val)})
+	_, err := lp.send(cloud.SetMinSoC, &pb.EdgeRequest{Payload: &pb.Payload{Intval: int64(val)}})
 	_ = err
 	return err
 }
@@ -115,16 +115,19 @@ func (lp *Adapter) GetPhases() int {
 	if err != nil {
 		return 0
 	}
-	return int(resp.Intval)
+	return int(resp.Payload.Intval)
 }
 
 func (lp *Adapter) SetPhases(val int) error {
-	_, err := lp.send(cloud.SetPhases, &pb.EdgeRequest{Intval: int64(val)})
+	_, err := lp.send(cloud.SetPhases, &pb.EdgeRequest{Payload: &pb.Payload{Intval: int64(val)}})
 	return err
 }
 
 func (lp *Adapter) SetTargetCharge(t time.Time, val int) {
-	_, err := lp.send(cloud.SetTargetCharge, &pb.EdgeRequest{Timeval: timestamppb.New(t), Intval: int64(val)})
+	_, err := lp.send(cloud.SetTargetCharge, &pb.EdgeRequest{Payload: &pb.Payload{
+		Timeval: timestamppb.New(t),
+		Intval:  int64(val),
+	}})
 	_ = err
 }
 
@@ -133,7 +136,7 @@ func (lp *Adapter) GetChargePower() float64 {
 	if err != nil {
 		return 0
 	}
-	return resp.Floatval
+	return resp.Payload.Floatval
 }
 
 func (lp *Adapter) GetMinCurrent() float64 {
@@ -141,11 +144,11 @@ func (lp *Adapter) GetMinCurrent() float64 {
 	if err != nil {
 		return 0
 	}
-	return resp.Floatval
+	return resp.Payload.Floatval
 }
 
 func (lp *Adapter) SetMinCurrent(val float64) {
-	_, err := lp.send(cloud.SetMinCurrent, &pb.EdgeRequest{Floatval: val})
+	_, err := lp.send(cloud.SetMinCurrent, &pb.EdgeRequest{Payload: &pb.Payload{Floatval: val}})
 	_ = err
 }
 
@@ -154,11 +157,11 @@ func (lp *Adapter) GetMaxCurrent() float64 {
 	if err != nil {
 		return 0
 	}
-	return resp.Floatval
+	return resp.Payload.Floatval
 }
 
 func (lp *Adapter) SetMaxCurrent(val float64) {
-	_, err := lp.send(cloud.SetMaxCurrent, &pb.EdgeRequest{Floatval: val})
+	_, err := lp.send(cloud.SetMaxCurrent, &pb.EdgeRequest{Payload: &pb.Payload{Floatval: val}})
 	_ = err
 }
 
@@ -167,7 +170,7 @@ func (lp *Adapter) GetMinPower() float64 {
 	if err != nil {
 		return 0
 	}
-	return resp.Floatval
+	return resp.Payload.Floatval
 }
 
 func (lp *Adapter) GetMaxPower() float64 {
@@ -175,7 +178,7 @@ func (lp *Adapter) GetMaxPower() float64 {
 	if err != nil {
 		return 0
 	}
-	return resp.Floatval
+	return resp.Payload.Floatval
 }
 
 func (lp *Adapter) GetRemainingDuration() time.Duration {
@@ -183,7 +186,7 @@ func (lp *Adapter) GetRemainingDuration() time.Duration {
 	if err != nil {
 		return 0
 	}
-	return resp.Durationval.AsDuration()
+	return resp.Payload.Durationval.AsDuration()
 }
 
 func (lp *Adapter) GetRemainingEnergy() float64 {
@@ -191,10 +194,10 @@ func (lp *Adapter) GetRemainingEnergy() float64 {
 	if err != nil {
 		return 0
 	}
-	return resp.Floatval
+	return resp.Payload.Floatval
 }
 
 func (lp *Adapter) RemoteControl(_ string, demand loadpoint.RemoteDemand) {
-	_, err := lp.send(cloud.RemoteControl, &pb.EdgeRequest{Stringval: string(demand)})
+	_, err := lp.send(cloud.RemoteControl, &pb.EdgeRequest{Payload: &pb.Payload{Stringval: string(demand)}})
 	_ = err
 }

@@ -25,6 +25,7 @@ func (s *Server) SendEdgeResponse(inS pb.CloudConnectService_SendEdgeResponseSer
 		if err != nil {
 			return err
 		}
+		_ = req
 	}
 }
 
