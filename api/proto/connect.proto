@@ -12,7 +12,8 @@ service CloudConnectService {
 message SubscribeRequest {}
 
 message BackendRequest {
-	string result = 1;
+	string _ = 1;
+	int32 api = 2;
 }
 
 message UpdateRequest {

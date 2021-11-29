@@ -189,12 +189,14 @@ func run(cmd *cobra.Command, args []string) {
 		host := util.Getenv("GRPC_CC_URI", cloud.Host)
 		// host = "localhost:50005"
 		log.INFO.Println("connecting cloud at:", host)
-		conn, err := cloud.Connection2(host)
+		conn, err := cloud.Connection(host)
+		if err == nil {
+			err = cloud.Connect(conn, site, tee.Attach())
+		}
+
 		if err != nil {
 			log.FATAL.Fatal(err)
 		}
-
-		cloud.Connect(conn, tee.Attach())
 	}
 
 	// create webserver
