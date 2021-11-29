@@ -191,7 +191,7 @@ func run(cmd *cobra.Command, args []string) {
 		log.INFO.Println("connecting cloud at:", host)
 		conn, err := cloud.Connection(host)
 		if err == nil {
-			err = cloud.Connect(conn, site, tee.Attach())
+			err = cloud.ConnectToBackend(conn, site, tee.Attach())
 		}
 
 		if err != nil {

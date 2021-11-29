@@ -1,5 +1,13 @@
 package cloud
 
+import (
+	"encoding/gob"
+	"time"
+
+	"github.com/evcc-io/evcc/api"
+	"github.com/evcc-io/evcc/core/loadpoint"
+)
+
 type ApiCall int
 
 const (
@@ -27,3 +35,15 @@ const (
 	GetRemainingEnergy
 	RemoteControl
 )
+
+func init() {
+	RegisterTypes()
+}
+
+func RegisterTypes() {
+	gob.Register(api.ModeEmpty)
+	gob.Register(api.StatusNone)
+	gob.Register(loadpoint.RemoteEnable)
+	gob.Register(time.Duration(0))
+	gob.Register(time.Time{})
+}

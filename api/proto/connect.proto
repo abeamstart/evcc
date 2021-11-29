@@ -8,12 +8,16 @@ import "google/protobuf/timestamp.proto";
 option go_package = "proto/pb";
 
 service CloudConnectService {
-	rpc SubscribeEdgeRequest (Empty) returns (stream EdgeRequest) {}
+	rpc SubscribeEdgeRequest (EdgeEnvironment) returns (stream EdgeRequest) {}
 	rpc SendEdgeResponse (stream EdgeResponse) returns(Empty) {}
 	rpc SendEdgeUpdate (stream UpdateRequest) returns(Empty) {}
 }
 
 message Empty {}
+
+message EdgeEnvironment {
+	int32 loadpoints = 1;
+}
 
 message EdgeRequest {
 	uint64 id = 1;

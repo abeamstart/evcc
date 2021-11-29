@@ -18,7 +18,7 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type CloudConnectServiceClient interface {
-	SubscribeEdgeRequest(ctx context.Context, in *Empty, opts ...grpc.CallOption) (CloudConnectService_SubscribeEdgeRequestClient, error)
+	SubscribeEdgeRequest(ctx context.Context, in *EdgeEnvironment, opts ...grpc.CallOption) (CloudConnectService_SubscribeEdgeRequestClient, error)
 	SendEdgeResponse(ctx context.Context, opts ...grpc.CallOption) (CloudConnectService_SendEdgeResponseClient, error)
 	SendEdgeUpdate(ctx context.Context, opts ...grpc.CallOption) (CloudConnectService_SendEdgeUpdateClient, error)
 }
@@ -31,7 +31,7 @@ func NewCloudConnectServiceClient(cc grpc.ClientConnInterface) CloudConnectServi
 	return &cloudConnectServiceClient{cc}
 }
 
-func (c *cloudConnectServiceClient) SubscribeEdgeRequest(ctx context.Context, in *Empty, opts ...grpc.CallOption) (CloudConnectService_SubscribeEdgeRequestClient, error) {
+func (c *cloudConnectServiceClient) SubscribeEdgeRequest(ctx context.Context, in *EdgeEnvironment, opts ...grpc.CallOption) (CloudConnectService_SubscribeEdgeRequestClient, error) {
 	stream, err := c.cc.NewStream(ctx, &CloudConnectService_ServiceDesc.Streams[0], "/CloudConnectService/SubscribeEdgeRequest", opts...)
 	if err != nil {
 		return nil, err
@@ -135,7 +135,7 @@ func (x *cloudConnectServiceSendEdgeUpdateClient) CloseAndRecv() (*Empty, error)
 // All implementations must embed UnimplementedCloudConnectServiceServer
 // for forward compatibility
 type CloudConnectServiceServer interface {
-	SubscribeEdgeRequest(*Empty, CloudConnectService_SubscribeEdgeRequestServer) error
+	SubscribeEdgeRequest(*EdgeEnvironment, CloudConnectService_SubscribeEdgeRequestServer) error
 	SendEdgeResponse(CloudConnectService_SendEdgeResponseServer) error
 	SendEdgeUpdate(CloudConnectService_SendEdgeUpdateServer) error
 	mustEmbedUnimplementedCloudConnectServiceServer()
@@ -145,7 +145,7 @@ type CloudConnectServiceServer interface {
 type UnimplementedCloudConnectServiceServer struct {
 }
 
-func (UnimplementedCloudConnectServiceServer) SubscribeEdgeRequest(*Empty, CloudConnectService_SubscribeEdgeRequestServer) error {
+func (UnimplementedCloudConnectServiceServer) SubscribeEdgeRequest(*EdgeEnvironment, CloudConnectService_SubscribeEdgeRequestServer) error {
 	return status.Errorf(codes.Unimplemented, "method SubscribeEdgeRequest not implemented")
 }
 func (UnimplementedCloudConnectServiceServer) SendEdgeResponse(CloudConnectService_SendEdgeResponseServer) error {
@@ -168,7 +168,7 @@ func RegisterCloudConnectServiceServer(s grpc.ServiceRegistrar, srv CloudConnect
 }
 
 func _CloudConnectService_SubscribeEdgeRequest_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(Empty)
+	m := new(EdgeEnvironment)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}

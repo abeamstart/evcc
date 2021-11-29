@@ -1,4 +1,4 @@
-package cloud
+package edge
 
 import (
 	"bytes"
@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"time"
 
 	"github.com/evcc-io/evcc/api"
 	"github.com/evcc-io/evcc/api/proto/pb"
@@ -15,24 +14,15 @@ import (
 	"github.com/evcc-io/evcc/core/loadpoint"
 	"github.com/evcc-io/evcc/core/site"
 	"github.com/evcc-io/evcc/util"
+	"github.com/evcc-io/evcc/util/cloud"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/durationpb"
 )
 
-func init() {
-	RegisterTypes()
-}
-
-func RegisterTypes() {
-	gob.Register(api.ModeEmpty)
-	gob.Register(api.StatusNone)
-	gob.Register(loadpoint.RemoteEnable)
-	gob.Register(time.Duration(0))
-	gob.Register(time.Time{})
-}
-
-func Connect(conn *grpc.ClientConn, site *core.Site, in <-chan util.Param) error {
+func ConnectToBackend(conn *grpc.ClientConn, site *core.Site, in <-chan util.Param) error {
 	client := pb.NewCloudConnectServiceClient(conn)
+
+	// edge to backend
 
 	updateS, err := client.SendEdgeUpdate(context.Background())
 	if err != nil {
@@ -41,7 +31,13 @@ func Connect(conn *grpc.ClientConn, site *core.Site, in <-chan util.Param) error
 
 	go sendUpdates(updateS, in)
 
-	inS, err := client.SubscribeEdgeRequest(context.Background(), new(pb.Empty))
+	// backend to edge
+
+	req := &pb.EdgeEnvironment{
+		Loadpoints: int32(len(site.LoadPoints())),
+	}
+
+	inS, err := client.SubscribeEdgeRequest(context.Background(), req)
 	if err != nil {
 		return err
 	}
@@ -98,7 +94,7 @@ func handleRequest(inS pb.CloudConnectService_SubscribeEdgeRequestClient, outS p
 			os.Exit(1)
 		}
 
-		resp, err := processRequest(site, req)
+		resp, err := apiRequest(site, req)
 		if err != nil {
 			resp.Error = err.Error()
 		}
@@ -109,7 +105,7 @@ func handleRequest(inS pb.CloudConnectService_SubscribeEdgeRequestClient, outS p
 	}
 }
 
-func processRequest(site site.API, req *pb.EdgeRequest) (*pb.EdgeResponse, error) {
+func apiRequest(site site.API, req *pb.EdgeRequest) (*pb.EdgeResponse, error) {
 	res := &pb.EdgeResponse{
 		Id: req.Id,
 	}
@@ -121,71 +117,71 @@ func processRequest(site site.API, req *pb.EdgeRequest) (*pb.EdgeResponse, error
 
 	var err error
 
-	switch ApiCall(req.Api) {
-	case Name:
+	switch cloud.ApiCall(req.Api) {
+	case cloud.Name:
 		res.Stringval = lp.Name()
 
-	case HasChargeMeter:
+	case cloud.HasChargeMeter:
 		res.Boolval = lp.HasChargeMeter()
 
-	case GetStatus:
+	case cloud.GetStatus:
 		res.Stringval = string(lp.GetStatus())
 
-	case GetMode:
+	case cloud.GetMode:
 		res.Stringval = string(lp.GetMode())
 
-	case SetMode:
+	case cloud.SetMode:
 		lp.SetMode(api.ChargeMode(req.Stringval))
 
-	case GetTargetSoC:
+	case cloud.GetTargetSoC:
 		res.Intval = int64(lp.GetTargetSoC())
 
-	case SetTargetSoC:
+	case cloud.SetTargetSoC:
 		err = lp.SetTargetSoC(int(req.Intval))
 
-	case GetMinSoC:
+	case cloud.GetMinSoC:
 		res.Intval = int64(lp.GetMinSoC())
 
-	case SetMinSoC:
+	case cloud.SetMinSoC:
 		err = lp.SetMinSoC(int(req.Intval))
 
-	case GetPhases:
+	case cloud.GetPhases:
 		res.Intval = int64(lp.GetPhases())
 
-	case SetPhases:
+	case cloud.SetPhases:
 		err = lp.SetPhases(int(req.Intval))
 
-	case SetTargetCharge:
+	case cloud.SetTargetCharge:
 		lp.SetTargetCharge(req.Timeval.AsTime(), int(req.Intval))
 
-	case GetChargePower:
+	case cloud.GetChargePower:
 		res.Floatval = lp.GetChargePower()
 
-	case GetMinCurrent:
+	case cloud.GetMinCurrent:
 		res.Floatval = lp.GetMinCurrent()
 
-	case SetMinCurrent:
+	case cloud.SetMinCurrent:
 		lp.SetMinCurrent(req.Floatval)
 
-	case GetMaxCurrent:
+	case cloud.GetMaxCurrent:
 		res.Floatval = lp.GetMaxCurrent()
 
-	case SetMaxCurrent:
+	case cloud.SetMaxCurrent:
 		lp.SetMaxCurrent(req.Floatval)
 
-	case GetMinPower:
+	case cloud.GetMinPower:
 		res.Floatval = lp.GetMinPower()
 
-	case GetMaxPower:
+	case cloud.GetMaxPower:
 		res.Floatval = lp.GetMaxPower()
 
-	case GetRemainingDuration:
+	case cloud.GetRemainingDuration:
 		res.Durationval = durationpb.New(lp.GetRemainingDuration())
 
-	case GetRemainingEnergy:
+	case cloud.GetRemainingEnergy:
 		res.Floatval = lp.GetRemainingEnergy()
 
-	case RemoteControl:
+	case cloud.RemoteControl:
 		lp.RemoteControl("my.evcc.io", loadpoint.RemoteDemand(req.Stringval))
 
 	default:
