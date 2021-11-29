@@ -1,9 +1,9 @@
 package cloud
 
-type API int
+type ApiCall int
 
 const (
-	_ API = iota
+	_ ApiCall = iota
 	Name
 	HasChargeMeter
 	GetStatus
