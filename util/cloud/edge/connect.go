@@ -119,70 +119,70 @@ func apiRequest(site site.API, req *pb.EdgeRequest) (*pb.EdgeResponse, error) {
 
 	switch cloud.ApiCall(req.Api) {
 	case cloud.Name:
-		res.Payload.Stringval = lp.Name()
+		res.Payload.StringVal = lp.Name()
 
 	case cloud.HasChargeMeter:
-		res.Payload.Boolval = lp.HasChargeMeter()
+		res.Payload.BoolVal = lp.HasChargeMeter()
 
 	case cloud.GetStatus:
-		res.Payload.Stringval = string(lp.GetStatus())
+		res.Payload.StringVal = string(lp.GetStatus())
 
 	case cloud.GetMode:
-		res.Payload.Stringval = string(lp.GetMode())
+		res.Payload.StringVal = string(lp.GetMode())
 
 	case cloud.SetMode:
-		lp.SetMode(api.ChargeMode(req.Payload.Stringval))
+		lp.SetMode(api.ChargeMode(req.Payload.StringVal))
 
 	case cloud.GetTargetSoC:
-		res.Payload.Intval = int64(lp.GetTargetSoC())
+		res.Payload.IntVal = int64(lp.GetTargetSoC())
 
 	case cloud.SetTargetSoC:
-		err = lp.SetTargetSoC(int(req.Payload.Intval))
+		err = lp.SetTargetSoC(int(req.Payload.IntVal))
 
 	case cloud.GetMinSoC:
-		res.Payload.Intval = int64(lp.GetMinSoC())
+		res.Payload.IntVal = int64(lp.GetMinSoC())
 
 	case cloud.SetMinSoC:
-		err = lp.SetMinSoC(int(req.Payload.Intval))
+		err = lp.SetMinSoC(int(req.Payload.IntVal))
 
 	case cloud.GetPhases:
-		res.Payload.Intval = int64(lp.GetPhases())
+		res.Payload.IntVal = int64(lp.GetPhases())
 
 	case cloud.SetPhases:
-		err = lp.SetPhases(int(req.Payload.Intval))
+		err = lp.SetPhases(int(req.Payload.IntVal))
 
 	case cloud.SetTargetCharge:
-		lp.SetTargetCharge(req.Payload.Timeval.AsTime(), int(req.Payload.Intval))
+		lp.SetTargetCharge(req.Payload.TimeVal.AsTime(), int(req.Payload.IntVal))
 
 	case cloud.GetChargePower:
-		res.Payload.Floatval = lp.GetChargePower()
+		res.Payload.FloatVal = lp.GetChargePower()
 
 	case cloud.GetMinCurrent:
-		res.Payload.Floatval = lp.GetMinCurrent()
+		res.Payload.FloatVal = lp.GetMinCurrent()
 
 	case cloud.SetMinCurrent:
-		lp.SetMinCurrent(req.Payload.Floatval)
+		lp.SetMinCurrent(req.Payload.FloatVal)
 
 	case cloud.GetMaxCurrent:
-		res.Payload.Floatval = lp.GetMaxCurrent()
+		res.Payload.FloatVal = lp.GetMaxCurrent()
 
 	case cloud.SetMaxCurrent:
-		lp.SetMaxCurrent(req.Payload.Floatval)
+		lp.SetMaxCurrent(req.Payload.FloatVal)
 
 	case cloud.GetMinPower:
-		res.Payload.Floatval = lp.GetMinPower()
+		res.Payload.FloatVal = lp.GetMinPower()
 
 	case cloud.GetMaxPower:
-		res.Payload.Floatval = lp.GetMaxPower()
+		res.Payload.FloatVal = lp.GetMaxPower()
 
 	case cloud.GetRemainingDuration:
-		res.Payload.Durationval = durationpb.New(lp.GetRemainingDuration())
+		res.Payload.DurationVal = durationpb.New(lp.GetRemainingDuration())
 
 	case cloud.GetRemainingEnergy:
-		res.Payload.Floatval = lp.GetRemainingEnergy()
+		res.Payload.FloatVal = lp.GetRemainingEnergy()
 
 	case cloud.RemoteControl:
-		lp.RemoteControl("my.evcc.io", loadpoint.RemoteDemand(req.Payload.Stringval))
+		lp.RemoteControl("my.evcc.io", loadpoint.RemoteDemand(req.Payload.StringVal))
 
 	default:
 		err = fmt.Errorf("unknown api call %d", req.Api)

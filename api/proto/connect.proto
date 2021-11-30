@@ -20,12 +20,12 @@ message EdgeEnvironment {
 }
 
 message Payload {
-	string stringval = 4;
-	double floatval = 5;
-	bool boolval = 6;
-	int64 intval = 7;
-	google.protobuf.Timestamp timeval = 8;
-	google.protobuf.Duration durationval = 9;
+	string string_val = 4;
+	double float_val = 5;
+	bool bool_val = 6;
+	int64 int_val = 7;
+	google.protobuf.Timestamp time_val = 8;
+	google.protobuf.Duration duration_val = 9;
 }
 
 message EdgeRequest {
