@@ -137,13 +137,13 @@ func apiRequest(site site.API, req *pb.EdgeRequest) (*pb.EdgeResponse, error) {
 		res.Payload.IntVal = int64(lp.GetTargetSoC())
 
 	case cloud.SetTargetSoC:
-		err = lp.SetTargetSoC(int(req.Payload.IntVal))
+		lp.SetTargetSoC(int(req.Payload.IntVal))
 
 	case cloud.GetMinSoC:
 		res.Payload.IntVal = int64(lp.GetMinSoC())
 
 	case cloud.SetMinSoC:
-		err = lp.SetMinSoC(int(req.Payload.IntVal))
+		lp.SetMinSoC(int(req.Payload.IntVal))
 
 	case cloud.GetPhases:
 		res.Payload.IntVal = int64(lp.GetPhases())

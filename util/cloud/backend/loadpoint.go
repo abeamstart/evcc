@@ -91,9 +91,9 @@ func (lp *Adapter) GetTargetSoC() int {
 	return int(resp.Payload.IntVal)
 }
 
-func (lp *Adapter) SetTargetSoC(val int) error {
+func (lp *Adapter) SetTargetSoC(val int) {
 	_, err := lp.send(cloud.SetTargetSoC, &pb.EdgeRequest{Payload: &pb.Payload{IntVal: int64(val)}})
-	return err
+	_ = err
 }
 
 func (lp *Adapter) GetMinSoC() int {
@@ -104,10 +104,9 @@ func (lp *Adapter) GetMinSoC() int {
 	return int(resp.Payload.IntVal)
 }
 
-func (lp *Adapter) SetMinSoC(val int) error {
+func (lp *Adapter) SetMinSoC(val int) {
 	_, err := lp.send(cloud.SetMinSoC, &pb.EdgeRequest{Payload: &pb.Payload{IntVal: int64(val)}})
 	_ = err
-	return err
 }
 
 func (lp *Adapter) GetPhases() int {
