@@ -53,8 +53,8 @@ func (d *Device) Values() (map[sunny.ValueID]interface{}, error) {
 	d.mux.Lock()
 	defer d.mux.Unlock()
 
-	if late := d.mux.Overdue(); late > 0 {
-		return nil, fmt.Errorf("update timeout: %v", late.Truncate(time.Second))
+	if err := d.mux.Overdue(); err != nil {
+		return nil, fmt.Errorf("update %w", err)
 	}
 
 	// return a copy of the map to avoid race conditions

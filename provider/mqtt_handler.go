@@ -5,7 +5,6 @@ import (
 	"math"
 	"regexp"
 	"strconv"
-	"time"
 
 	"github.com/evcc-io/evcc/util"
 	"github.com/evcc-io/evcc/util/jq"
@@ -34,8 +33,8 @@ func (h *msgHandler) hasValue() (string, error) {
 	h.mux.Lock()
 	defer h.mux.Unlock()
 
-	if late := h.mux.Overdue(); late > 0 {
-		return "", fmt.Errorf("%s outdated: %v", h.topic, late.Truncate(time.Second))
+	if err := h.mux.Overdue(); err != nil {
+		return "", fmt.Errorf("%s %w", h.topic, err)
 	}
 
 	var err error

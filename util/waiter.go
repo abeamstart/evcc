@@ -1,6 +1,7 @@
 package util
 
 import (
+	"fmt"
 	"sync"
 	"time"
 )
@@ -10,16 +11,14 @@ var waitInitialTimeout = 10 * time.Second
 // Waiter provides monitoring of receive timeouts and reception of initial value
 type Waiter struct {
 	sync.Mutex
-	log     func()
 	cond    *sync.Cond
 	updated time.Time
 	timeout time.Duration
 }
 
 // NewWaiter creates new waiter
-func NewWaiter(timeout time.Duration, logInitialWait func()) *Waiter {
+func NewWaiter(timeout time.Duration) *Waiter {
 	p := &Waiter{
-		log:     logInitialWait,
 		timeout: timeout,
 	}
 	p.cond = sync.NewCond(p)
@@ -33,12 +32,10 @@ func (p *Waiter) Update() {
 	p.cond.Broadcast()
 }
 
-// Overdue waits for initial update and returns the duration since the last update
-// in excess of timeout. Waiter MUST be locked when calling Overdue.
-func (p *Waiter) Overdue() time.Duration {
+// Overdue waits for initial update and returns an error if timeout exceeded.
+// Waiter MUST be locked when calling Overdue.
+func (p *Waiter) Overdue() error {
 	if p.updated.IsZero() {
-		p.log()
-
 		c := make(chan struct{})
 
 		go func() {
@@ -51,17 +48,18 @@ func (p *Waiter) Overdue() time.Duration {
 		select {
 		case <-c:
 			// initial value received, lock established
+			return nil
 		case <-time.After(waitInitialTimeout):
 			p.Update()              // unblock the sync.Cond
 			<-c                     // wait for goroutine, re-establish lock
 			p.updated = time.Time{} // reset updated to initial value missing
-			return waitInitialTimeout
+			return fmt.Errorf("timeout: %v", waitInitialTimeout)
 		}
 	}
 
 	if elapsed := time.Since(p.updated); p.timeout != 0 && elapsed > p.timeout {
-		return elapsed
+		return fmt.Errorf("timeout: %v", elapsed)
 	}
 
-	return 0
+	return nil
 }

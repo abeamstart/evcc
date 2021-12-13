@@ -62,7 +62,7 @@ func NewSocketProviderFromConfig(other map[string]interface{}) (IntProvider, err
 	p := &Socket{
 		log:     log,
 		Helper:  request.NewHelper(log),
-		mux:     util.NewWaiter(cc.Timeout, func() { log.DEBUG.Println("wait for initial value") }),
+		mux:     util.NewWaiter(cc.Timeout),
 		url:     url,
 		headers: cc.Headers,
 		scale:   cc.Scale,
@@ -144,11 +144,9 @@ func (p *Socket) hasValue() (interface{}, error) {
 	p.mux.Lock()
 	defer p.mux.Unlock()
 
-	if late := p.mux.Overdue(); late > 0 {
-		return nil, fmt.Errorf("outdated: %v", late.Truncate(time.Second))
-	}
+	err := p.mux.Overdue()
 
-	return p.val, nil
+	return p.val, err
 }
 
 // StringGetter sends string request

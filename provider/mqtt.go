@@ -119,7 +119,7 @@ func (m *Mqtt) newReceiver() *msgHandler {
 	h := &msgHandler{
 		topic: m.topic,
 		scale: m.scale,
-		mux:   util.NewWaiter(m.timeout, func() { m.log.DEBUG.Printf("%s wait for initial value", m.topic) }),
+		mux:   util.NewWaiter(m.timeout),
 		re:    m.re,
 		jq:    m.jq,
 	}
