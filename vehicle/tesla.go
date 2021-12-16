@@ -89,9 +89,21 @@ func NewTeslaFromConfig(other map[string]interface{}) (api.Vehicle, error) {
 	v.vehicleStateG = provider.NewCached(v.vehicleState, cc.Cache).InterfaceGetter()
 	v.driveStateG = provider.NewCached(v.driveState, cc.Cache).InterfaceGetter()
 
-	if err := v.stream("cpuidle@gmx.de"); err != nil {
-		log.WARN.Println("streaming failed:", err)
+	c := make(chan tesla.Message)
+	go func() {
+		for v := range c {
+			fmt.Println(v)
+		}
+	}()
+
+	for err == nil || errors.Is(err, tesla.VehicleDisconnectedError) {
+		// for err == nil {
+		// tesla.StreamParams = "soc,range"
+		err = client.Stream(v.vehicle.VehicleID, c)
+		fmt.Println(err)
 	}
+
+	fmt.Println(err)
 
 	println("sleep")
 	time.Sleep(10 * time.Second)
@@ -115,22 +127,22 @@ func (v *Tesla) driveState() (interface{}, error) {
 }
 
 func (v *Tesla) stream(email string) error {
-	tesla.StreamParams = "soc,range"
-	evtC, errC, err := v.vehicle.Stream(email)
-	if err != nil {
-		return err
-	}
+	// tesla.StreamParams = "soc,range"
+	// evtC, errC, err := v.vehicle.Stream(email)
+	// if err != nil {
+	// 	return err
+	// }
 
-	go func() {
-		for {
-			select {
-			case evt := <-evtC:
-				fmt.Println(evt)
-			case err := <-errC:
-				println("streaming failed:", err)
-			}
-		}
-	}()
+	// go func() {
+	// 	for {
+	// 		select {
+	// 		case evt := <-evtC:
+	// 			fmt.Println(evt)
+	// 		case err := <-errC:
+	// 			println("streaming failed:", err)
+	// 		}
+	// 	}
+	// }()
 
 	return nil
 }
