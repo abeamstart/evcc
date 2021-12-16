@@ -5,9 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/bogosj/tesla"
+	"github.com/cenkalti/backoff/v4"
 	"github.com/evcc-io/evcc/api"
 	"github.com/evcc-io/evcc/provider"
 	"github.com/evcc-io/evcc/util"
@@ -89,26 +91,38 @@ func NewTeslaFromConfig(other map[string]interface{}) (api.Vehicle, error) {
 	v.vehicleStateG = provider.NewCached(v.vehicleState, cc.Cache).InterfaceGetter()
 	v.driveStateG = provider.NewCached(v.driveState, cc.Cache).InterfaceGetter()
 
+	go v.stream(log, client)
+
+	println("sleep")
+	time.Sleep(60 * time.Second)
+
+	return v, nil
+}
+
+func (v *Tesla) stream(log *util.Logger, client *tesla.Client) {
+	tesla.StreamParams = "soc,range"
+	bo := backoff.NewExponentialBackOff()
+
+	var mu sync.Mutex
 	c := make(chan tesla.Message)
 	go func() {
 		for v := range c {
+			mu.Lock()
+			bo.Reset()
+			mu.Unlock()
 			fmt.Println(v)
 		}
 	}()
 
-	for err == nil || errors.Is(err, tesla.VehicleDisconnectedError) {
-		// for err == nil {
-		// tesla.StreamParams = "soc,range"
-		err = client.Stream(v.vehicle.VehicleID, c)
-		fmt.Println(err)
+	for {
+		if err := client.Stream(v.vehicle.VehicleID, c); err != nil {
+			log.ERROR.Println(err)
+		}
+
+		mu.Lock()
+		time.Sleep(bo.NextBackOff())
+		mu.Unlock()
 	}
-
-	fmt.Println(err)
-
-	println("sleep")
-	time.Sleep(10 * time.Second)
-
-	return v, nil
 }
 
 // chargeState implements the charge state api
@@ -124,27 +138,6 @@ func (v *Tesla) vehicleState() (interface{}, error) {
 // driveState implements the climater api
 func (v *Tesla) driveState() (interface{}, error) {
 	return v.vehicle.DriveState()
-}
-
-func (v *Tesla) stream(email string) error {
-	// tesla.StreamParams = "soc,range"
-	// evtC, errC, err := v.vehicle.Stream(email)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// go func() {
-	// 	for {
-	// 		select {
-	// 		case evt := <-evtC:
-	// 			fmt.Println(evt)
-	// 		case err := <-errC:
-	// 			println("streaming failed:", err)
-	// 		}
-	// 	}
-	// }()
-
-	return nil
 }
 
 // SoC implements the api.Vehicle interface
