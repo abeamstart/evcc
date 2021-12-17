@@ -1,23 +1,27 @@
 package charger
 
 import (
+	"encoding/binary"
 	"errors"
 	"time"
 
 	"github.com/evcc-io/evcc/api"
 	"github.com/evcc-io/evcc/util"
 	"github.com/evcc-io/evcc/util/modbus"
+	"github.com/evcc-io/evcc/util/sponsor"
 )
 
 // SimpleEVSE charger implementation
 type SimpleEVSE struct {
 	conn    *modbus.Connection
 	current int64
+	ex      bool
 }
 
 const (
-	evseRegAmpsConfig    = 1000
-	evseRegVehicleStatus = 1002
+	evseRegAmpsConfig      = 1000
+	evseRegVehicleStatus   = 1002
+	evseRegVehicleFirmware = 1005
 )
 
 func init() {
@@ -55,6 +59,17 @@ func NewSimpleEVSE(uri, device, comset string, baudrate int, rtu bool, slaveID u
 	evse := &SimpleEVSE{
 		conn:    conn,
 		current: 6, // assume min current
+	}
+
+	b, err := evse.conn.ReadHoldingRegisters(evseRegVehicleStatus, 1)
+	if err == nil {
+		if binary.BigEndian.Uint16(b) >= 17 {
+			if sponsor.IsAuthorized() {
+				evse.ex = true
+			} else {
+				log.WARN.Println("granular current control requires sponsor token")
+			}
+		}
 	}
 
 	return evse, nil
