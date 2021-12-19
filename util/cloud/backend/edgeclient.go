@@ -11,7 +11,7 @@ import (
 
 type EdgeClient struct {
 	id         string
-	loadpoints []*Adapter
+	loadpoints []*Loadpoint
 	conn       pb.CloudConnectService_SubscribeBackendRequestServer
 	rt         *RoundTripper
 	peer       *peer.Peer
@@ -27,7 +27,7 @@ func NewEdgeClient(req *pb.EdgeEnvironment, rt *RoundTripper, peer *peer.Peer) *
 
 	for i := 1; i <= int(req.GetLoadpoints()); i++ {
 		log := util.NewLogger(fmt.Sprintf("lp-%d", i))
-		c.loadpoints = append(c.loadpoints, NewAdapter(log, c, i))
+		c.loadpoints = append(c.loadpoints, NewLoadpoint(log, c, i))
 	}
 
 	return c

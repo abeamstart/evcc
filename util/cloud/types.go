@@ -12,6 +12,12 @@ type ApiCall int
 
 const (
 	_ ApiCall = iota
+
+	// site
+	Healthy
+	SetPrioritySoC
+
+	// loadpoint
 	Name
 	HasChargeMeter
 	GetStatus
