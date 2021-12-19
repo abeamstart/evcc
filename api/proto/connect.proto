@@ -8,15 +8,21 @@ import "google/protobuf/timestamp.proto";
 option go_package = "proto/pb";
 
 service CloudConnectService {
-	rpc SubscribeEdgeRequest (EdgeEnvironment) returns (stream EdgeRequest) {}
+	// SubscribeBackendRequest connects an edge client to the backend. The edge client will receive backend requests.
+	rpc SubscribeBackendRequest (EdgeEnvironment) returns (stream BackendRequest) {}
+
+	// SendEdgeResponse sends edge client responses in reply to backend requests.
 	rpc SendEdgeResponse (stream EdgeResponse) returns(Empty) {}
+
+	// SendEdgeUpdate sends edge client update notifications to the backend.
 	rpc SendEdgeUpdate (stream UpdateRequest) returns(Empty) {}
 }
 
 message Empty {}
 
 message EdgeEnvironment {
-	int32 loadpoints = 1;
+	string edge_id = 1;
+	int32 loadpoints = 2;
 }
 
 message Payload {
@@ -28,7 +34,7 @@ message Payload {
 	google.protobuf.Duration duration_val = 9;
 }
 
-message EdgeRequest {
+message BackendRequest {
 	uint64 id = 1;
 	int32 api = 2;
 	int32 loadpoint = 3;

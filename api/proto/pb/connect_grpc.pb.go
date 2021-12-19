@@ -18,8 +18,11 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type CloudConnectServiceClient interface {
-	SubscribeEdgeRequest(ctx context.Context, in *EdgeEnvironment, opts ...grpc.CallOption) (CloudConnectService_SubscribeEdgeRequestClient, error)
+	// SubscribeBackendRequest connects an edge client to the backend. The edge client will receive backend requests.
+	SubscribeBackendRequest(ctx context.Context, in *EdgeEnvironment, opts ...grpc.CallOption) (CloudConnectService_SubscribeBackendRequestClient, error)
+	// SendEdgeResponse sends edge client responses in reply to backend requests.
 	SendEdgeResponse(ctx context.Context, opts ...grpc.CallOption) (CloudConnectService_SendEdgeResponseClient, error)
+	// SendEdgeUpdate sends edge client update notifications to the backend.
 	SendEdgeUpdate(ctx context.Context, opts ...grpc.CallOption) (CloudConnectService_SendEdgeUpdateClient, error)
 }
 
@@ -31,12 +34,12 @@ func NewCloudConnectServiceClient(cc grpc.ClientConnInterface) CloudConnectServi
 	return &cloudConnectServiceClient{cc}
 }
 
-func (c *cloudConnectServiceClient) SubscribeEdgeRequest(ctx context.Context, in *EdgeEnvironment, opts ...grpc.CallOption) (CloudConnectService_SubscribeEdgeRequestClient, error) {
-	stream, err := c.cc.NewStream(ctx, &CloudConnectService_ServiceDesc.Streams[0], "/CloudConnectService/SubscribeEdgeRequest", opts...)
+func (c *cloudConnectServiceClient) SubscribeBackendRequest(ctx context.Context, in *EdgeEnvironment, opts ...grpc.CallOption) (CloudConnectService_SubscribeBackendRequestClient, error) {
+	stream, err := c.cc.NewStream(ctx, &CloudConnectService_ServiceDesc.Streams[0], "/CloudConnectService/SubscribeBackendRequest", opts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &cloudConnectServiceSubscribeEdgeRequestClient{stream}
+	x := &cloudConnectServiceSubscribeBackendRequestClient{stream}
 	if err := x.ClientStream.SendMsg(in); err != nil {
 		return nil, err
 	}
@@ -46,17 +49,17 @@ func (c *cloudConnectServiceClient) SubscribeEdgeRequest(ctx context.Context, in
 	return x, nil
 }
 
-type CloudConnectService_SubscribeEdgeRequestClient interface {
-	Recv() (*EdgeRequest, error)
+type CloudConnectService_SubscribeBackendRequestClient interface {
+	Recv() (*BackendRequest, error)
 	grpc.ClientStream
 }
 
-type cloudConnectServiceSubscribeEdgeRequestClient struct {
+type cloudConnectServiceSubscribeBackendRequestClient struct {
 	grpc.ClientStream
 }
 
-func (x *cloudConnectServiceSubscribeEdgeRequestClient) Recv() (*EdgeRequest, error) {
-	m := new(EdgeRequest)
+func (x *cloudConnectServiceSubscribeBackendRequestClient) Recv() (*BackendRequest, error) {
+	m := new(BackendRequest)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -135,8 +138,11 @@ func (x *cloudConnectServiceSendEdgeUpdateClient) CloseAndRecv() (*Empty, error)
 // All implementations must embed UnimplementedCloudConnectServiceServer
 // for forward compatibility
 type CloudConnectServiceServer interface {
-	SubscribeEdgeRequest(*EdgeEnvironment, CloudConnectService_SubscribeEdgeRequestServer) error
+	// SubscribeBackendRequest connects an edge client to the backend. The edge client will receive backend requests.
+	SubscribeBackendRequest(*EdgeEnvironment, CloudConnectService_SubscribeBackendRequestServer) error
+	// SendEdgeResponse sends edge client responses in reply to backend requests.
 	SendEdgeResponse(CloudConnectService_SendEdgeResponseServer) error
+	// SendEdgeUpdate sends edge client update notifications to the backend.
 	SendEdgeUpdate(CloudConnectService_SendEdgeUpdateServer) error
 	mustEmbedUnimplementedCloudConnectServiceServer()
 }
@@ -145,8 +151,8 @@ type CloudConnectServiceServer interface {
 type UnimplementedCloudConnectServiceServer struct {
 }
 
-func (UnimplementedCloudConnectServiceServer) SubscribeEdgeRequest(*EdgeEnvironment, CloudConnectService_SubscribeEdgeRequestServer) error {
-	return status.Errorf(codes.Unimplemented, "method SubscribeEdgeRequest not implemented")
+func (UnimplementedCloudConnectServiceServer) SubscribeBackendRequest(*EdgeEnvironment, CloudConnectService_SubscribeBackendRequestServer) error {
+	return status.Errorf(codes.Unimplemented, "method SubscribeBackendRequest not implemented")
 }
 func (UnimplementedCloudConnectServiceServer) SendEdgeResponse(CloudConnectService_SendEdgeResponseServer) error {
 	return status.Errorf(codes.Unimplemented, "method SendEdgeResponse not implemented")
@@ -167,24 +173,24 @@ func RegisterCloudConnectServiceServer(s grpc.ServiceRegistrar, srv CloudConnect
 	s.RegisterService(&CloudConnectService_ServiceDesc, srv)
 }
 
-func _CloudConnectService_SubscribeEdgeRequest_Handler(srv interface{}, stream grpc.ServerStream) error {
+func _CloudConnectService_SubscribeBackendRequest_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(EdgeEnvironment)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}
-	return srv.(CloudConnectServiceServer).SubscribeEdgeRequest(m, &cloudConnectServiceSubscribeEdgeRequestServer{stream})
+	return srv.(CloudConnectServiceServer).SubscribeBackendRequest(m, &cloudConnectServiceSubscribeBackendRequestServer{stream})
 }
 
-type CloudConnectService_SubscribeEdgeRequestServer interface {
-	Send(*EdgeRequest) error
+type CloudConnectService_SubscribeBackendRequestServer interface {
+	Send(*BackendRequest) error
 	grpc.ServerStream
 }
 
-type cloudConnectServiceSubscribeEdgeRequestServer struct {
+type cloudConnectServiceSubscribeBackendRequestServer struct {
 	grpc.ServerStream
 }
 
-func (x *cloudConnectServiceSubscribeEdgeRequestServer) Send(m *EdgeRequest) error {
+func (x *cloudConnectServiceSubscribeBackendRequestServer) Send(m *BackendRequest) error {
 	return x.ServerStream.SendMsg(m)
 }
 
@@ -249,8 +255,8 @@ var CloudConnectService_ServiceDesc = grpc.ServiceDesc{
 	Methods:     []grpc.MethodDesc{},
 	Streams: []grpc.StreamDesc{
 		{
-			StreamName:    "SubscribeEdgeRequest",
-			Handler:       _CloudConnectService_SubscribeEdgeRequest_Handler,
+			StreamName:    "SubscribeBackendRequest",
+			Handler:       _CloudConnectService_SubscribeBackendRequest_Handler,
 			ServerStreams: true,
 		},
 		{

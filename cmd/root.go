@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"net"
 	"net/http"
 	_ "net/http/pprof" // pprof handler
 	"os"
@@ -9,14 +10,18 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/evcc-io/evcc/api/proto/pb"
 	"github.com/evcc-io/evcc/server"
 	"github.com/evcc-io/evcc/server/updater"
 	"github.com/evcc-io/evcc/util"
 	"github.com/evcc-io/evcc/util/cloud"
+	"github.com/evcc-io/evcc/util/cloud/backend"
 	"github.com/evcc-io/evcc/util/cloud/edge"
 	"github.com/evcc-io/evcc/util/pipe"
 	"github.com/evcc-io/evcc/util/sponsor"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -186,18 +191,29 @@ func run(cmd *cobra.Command, args []string) {
 		go publisher.Run(site, pipe.NewDropper(ignoreMqtt...).Pipe(tee.Attach()))
 	}
 
-	if conf.CloudConnect {
-		host := util.Getenv("GRPC_CC_URI", cloud.Host)
-		// host = "localhost:50005"
-		log.INFO.Println("connecting cloud at:", host)
-		conn, err := cloud.Connection(host)
-		if err == nil {
-			err = edge.ConnectToBackend(conn, site, tee.Attach())
+	if true {
+		listener, err := net.Listen("tcp", ":50005")
+		if err != nil {
+			log.FATAL.Printf("failed to listen: %v", err)
 		}
 
-		if err != nil {
-			log.FATAL.Fatal(err)
+		grpcServer := grpc.NewServer(grpc.Creds(insecure.NewCredentials()))
+
+		srv := new(backend.Server)
+		srv.UpdateHandler = func(p util.Param) {
+			fmt.Println("recv param:", p)
 		}
+
+		pb.RegisterCloudConnectServiceServer(grpcServer, srv)
+
+		c := make(chan struct{})
+		go func() {
+			close(c)
+			log.FATAL.Println(grpcServer.Serve(listener))
+		}()
+		<-c
+
+		log.FATAL.Printf("connect startup complete")
 	}
 
 	// create webserver
@@ -248,10 +264,27 @@ func run(cmd *cobra.Command, args []string) {
 	stopC := make(chan struct{})
 	exitC := make(chan struct{})
 
+	c := make(chan struct{})
 	go func() {
+		close(c)
 		site.Run(stopC, conf.Interval)
 		close(exitC)
 	}()
+	<-c
+
+	if conf.CloudConnect {
+		host := util.Getenv("GRPC_CC_URI", cloud.Host)
+		host = "localhost:50005"
+		log.INFO.Println("connecting cloud at:", host)
+		conn, err := cloud.Connection(host)
+		if err == nil {
+			err = edge.ConnectToBackend(conn, site, tee.Attach())
+		}
+
+		if err != nil {
+			log.FATAL.Fatal(err)
+		}
+	}
 
 	// uds health check listener
 	go server.HealthListener(site, exitC)

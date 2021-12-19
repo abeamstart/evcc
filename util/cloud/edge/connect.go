@@ -20,6 +20,8 @@ import (
 )
 
 func ConnectToBackend(conn *grpc.ClientConn, site *core.Site, in <-chan util.Param) error {
+	fmt.Println("ConnectToBackend")
+
 	client := pb.NewCloudConnectServiceClient(conn)
 
 	// edge to backend
@@ -37,7 +39,7 @@ func ConnectToBackend(conn *grpc.ClientConn, site *core.Site, in <-chan util.Par
 		Loadpoints: int32(len(site.LoadPoints())),
 	}
 
-	inS, err := client.SubscribeEdgeRequest(context.Background(), req)
+	inS, err := client.SubscribeBackendRequest(context.Background(), req)
 	if err != nil {
 		return err
 	}
@@ -81,7 +83,7 @@ func sendUpdates(outS pb.CloudConnectService_SendEdgeUpdateClient, in <-chan uti
 	}
 }
 
-func handleRequest(inS pb.CloudConnectService_SubscribeEdgeRequestClient, outS pb.CloudConnectService_SendEdgeResponseClient, site site.API, done chan struct{}) {
+func handleRequest(inS pb.CloudConnectService_SubscribeBackendRequestClient, outS pb.CloudConnectService_SendEdgeResponseClient, site site.API, done chan struct{}) {
 	for {
 		req, err := inS.Recv()
 		if err == io.EOF {
@@ -94,6 +96,8 @@ func handleRequest(inS pb.CloudConnectService_SubscribeEdgeRequestClient, outS p
 			os.Exit(1)
 		}
 
+		fmt.Println("handleRequest", req)
+
 		resp, err := apiRequest(site, req)
 		if err != nil {
 			resp.Error = err.Error()
@@ -105,87 +109,102 @@ func handleRequest(inS pb.CloudConnectService_SubscribeEdgeRequestClient, outS p
 	}
 }
 
-func apiRequest(site site.API, req *pb.EdgeRequest) (*pb.EdgeResponse, error) {
+func apiRequest(site site.API, req *pb.BackendRequest) (*pb.EdgeResponse, error) {
 	res := &pb.EdgeResponse{
 		Id: req.Id,
 	}
 
 	var lp loadpoint.API
-	if req.Loadpoint > 0 {
-		lp = site.LoadPoints()[req.Loadpoint-1]
+	if num := req.GetLoadpoint(); num > 0 {
+		lp = site.LoadPoints()[num-1]
 	}
+
+	fmt.Printf("apiRequest %+v\n", lp)
 
 	var err error
 
-	switch cloud.ApiCall(req.Api) {
-	case cloud.Name:
-		res.Payload.StringVal = lp.Name()
+	if lp == nil {
+		// site api
+		res.Payload = new(pb.Payload)
 
-	case cloud.HasChargeMeter:
-		res.Payload.BoolVal = lp.HasChargeMeter()
+		switch cloud.ApiCall(req.Api) {
+		default:
+			err = fmt.Errorf("unknown site api call %d", req.Api)
+		}
+	} else {
+		// loadpoint api
+		res.Payload = new(pb.Payload)
 
-	case cloud.GetStatus:
-		res.Payload.StringVal = string(lp.GetStatus())
+		switch cloud.ApiCall(req.Api) {
+		case cloud.Name:
+			res.Payload.StringVal = lp.Name()
 
-	case cloud.GetMode:
-		res.Payload.StringVal = string(lp.GetMode())
+		case cloud.HasChargeMeter:
+			res.Payload.BoolVal = lp.HasChargeMeter()
 
-	case cloud.SetMode:
-		lp.SetMode(api.ChargeMode(req.Payload.StringVal))
+		case cloud.GetStatus:
+			res.Payload.StringVal = string(lp.GetStatus())
 
-	case cloud.GetTargetSoC:
-		res.Payload.IntVal = int64(lp.GetTargetSoC())
+		case cloud.GetMode:
+			res.Payload.StringVal = string(lp.GetMode())
 
-	case cloud.SetTargetSoC:
-		lp.SetTargetSoC(int(req.Payload.IntVal))
+		case cloud.SetMode:
+			lp.SetMode(api.ChargeMode(req.Payload.StringVal))
 
-	case cloud.GetMinSoC:
-		res.Payload.IntVal = int64(lp.GetMinSoC())
+		case cloud.GetTargetSoC:
+			res.Payload.IntVal = int64(lp.GetTargetSoC())
 
-	case cloud.SetMinSoC:
-		lp.SetMinSoC(int(req.Payload.IntVal))
+		case cloud.SetTargetSoC:
+			lp.SetTargetSoC(int(req.Payload.IntVal))
 
-	case cloud.GetPhases:
-		res.Payload.IntVal = int64(lp.GetPhases())
+		case cloud.GetMinSoC:
+			res.Payload.IntVal = int64(lp.GetMinSoC())
 
-	case cloud.SetPhases:
-		err = lp.SetPhases(int(req.Payload.IntVal))
+		case cloud.SetMinSoC:
+			lp.SetMinSoC(int(req.Payload.IntVal))
 
-	case cloud.SetTargetCharge:
-		lp.SetTargetCharge(req.Payload.TimeVal.AsTime(), int(req.Payload.IntVal))
+		case cloud.GetPhases:
+			res.Payload.IntVal = int64(lp.GetPhases())
 
-	case cloud.GetChargePower:
-		res.Payload.FloatVal = lp.GetChargePower()
+		case cloud.SetPhases:
+			err = lp.SetPhases(int(req.Payload.IntVal))
 
-	case cloud.GetMinCurrent:
-		res.Payload.FloatVal = lp.GetMinCurrent()
+		case cloud.SetTargetCharge:
+			lp.SetTargetCharge(req.Payload.TimeVal.AsTime(), int(req.Payload.IntVal))
 
-	case cloud.SetMinCurrent:
-		lp.SetMinCurrent(req.Payload.FloatVal)
+		case cloud.GetChargePower:
+			res.Payload.FloatVal = lp.GetChargePower()
 
-	case cloud.GetMaxCurrent:
-		res.Payload.FloatVal = lp.GetMaxCurrent()
+		case cloud.GetMinCurrent:
+			res.Payload.FloatVal = lp.GetMinCurrent()
 
-	case cloud.SetMaxCurrent:
-		lp.SetMaxCurrent(req.Payload.FloatVal)
+		case cloud.SetMinCurrent:
+			lp.SetMinCurrent(req.Payload.FloatVal)
 
-	case cloud.GetMinPower:
-		res.Payload.FloatVal = lp.GetMinPower()
+		case cloud.GetMaxCurrent:
+			res.Payload.FloatVal = lp.GetMaxCurrent()
 
-	case cloud.GetMaxPower:
-		res.Payload.FloatVal = lp.GetMaxPower()
+		case cloud.SetMaxCurrent:
+			lp.SetMaxCurrent(req.Payload.FloatVal)
 
-	case cloud.GetRemainingDuration:
-		res.Payload.DurationVal = durationpb.New(lp.GetRemainingDuration())
+		case cloud.GetMinPower:
+			res.Payload.FloatVal = lp.GetMinPower()
 
-	case cloud.GetRemainingEnergy:
-		res.Payload.FloatVal = lp.GetRemainingEnergy()
+		case cloud.GetMaxPower:
+			res.Payload.FloatVal = lp.GetMaxPower()
 
-	case cloud.RemoteControl:
-		lp.RemoteControl("my.evcc.io", loadpoint.RemoteDemand(req.Payload.StringVal))
+		case cloud.GetRemainingDuration:
+			res.Payload.DurationVal = durationpb.New(lp.GetRemainingDuration())
 
-	default:
-		err = fmt.Errorf("unknown api call %d", req.Api)
+		case cloud.GetRemainingEnergy:
+			res.Payload.FloatVal = lp.GetRemainingEnergy()
+
+		case cloud.RemoteControl:
+			lp.RemoteControl("my.evcc.io", loadpoint.RemoteDemand(req.Payload.StringVal))
+
+		default:
+			err = fmt.Errorf("unknown loadpoint api call %d", req.Api)
+		}
 	}
 
 	return res, err

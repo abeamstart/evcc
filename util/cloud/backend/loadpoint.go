@@ -13,17 +13,17 @@ import (
 
 type Adapter struct {
 	log    *util.Logger
-	sender Sender
-	ID     int32
+	sender Executor
+	ID     int
 }
 
-type Sender interface {
-	Execute(*pb.EdgeRequest) (*pb.EdgeResponse, error)
+type Executor interface {
+	Execute(*pb.BackendRequest) (*pb.EdgeResponse, error)
 }
 
 var _ loadpoint.API = (*Adapter)(nil)
 
-func NewAdapter(log *util.Logger, sender Sender, id int32) *Adapter {
+func NewAdapter(log *util.Logger, sender Executor, id int) *Adapter {
 	return &Adapter{
 		log:    log,
 		sender: sender,
@@ -31,12 +31,14 @@ func NewAdapter(log *util.Logger, sender Sender, id int32) *Adapter {
 	}
 }
 
-func (lp *Adapter) send(api cloud.ApiCall, req *pb.EdgeRequest) (*pb.EdgeResponse, error) {
+func (lp *Adapter) send(api cloud.ApiCall, req *pb.BackendRequest) (*pb.EdgeResponse, error) {
 	if req == nil {
-		req = &pb.EdgeRequest{}
+		req = new(pb.BackendRequest)
 	}
 
-	req.Loadpoint = lp.ID + 1
+	req.Loadpoint = int32(lp.ID + 1)
+	req.Api = int32(api)
+
 	resp, err := lp.sender.Execute(req)
 	if err != nil {
 		lp.log.ERROR.Printf("calling %d: %v", api, err)
@@ -65,7 +67,7 @@ func (lp *Adapter) HasChargeMeter() bool {
 func (lp *Adapter) GetStatus() api.ChargeStatus {
 	resp, err := lp.send(cloud.GetStatus, nil)
 	if err != nil {
-		return ""
+		return api.StatusNone
 	}
 	return api.ChargeStatus(resp.Payload.StringVal)
 }
@@ -73,14 +75,13 @@ func (lp *Adapter) GetStatus() api.ChargeStatus {
 func (lp *Adapter) GetMode() api.ChargeMode {
 	resp, err := lp.send(cloud.GetMode, nil)
 	if err != nil {
-		return ""
+		return api.ModeEmpty
 	}
 	return api.ChargeMode(resp.Payload.StringVal)
 }
 
 func (lp *Adapter) SetMode(val api.ChargeMode) {
-	_, err := lp.send(cloud.RemoteControl, &pb.EdgeRequest{Payload: &pb.Payload{StringVal: string(val)}})
-	_ = err
+	_, _ = lp.send(cloud.RemoteControl, &pb.BackendRequest{Payload: &pb.Payload{StringVal: string(val)}})
 }
 
 func (lp *Adapter) GetTargetSoC() int {
@@ -92,8 +93,7 @@ func (lp *Adapter) GetTargetSoC() int {
 }
 
 func (lp *Adapter) SetTargetSoC(val int) {
-	_, err := lp.send(cloud.SetTargetSoC, &pb.EdgeRequest{Payload: &pb.Payload{IntVal: int64(val)}})
-	_ = err
+	_, _ = lp.send(cloud.SetTargetSoC, &pb.BackendRequest{Payload: &pb.Payload{IntVal: int64(val)}})
 }
 
 func (lp *Adapter) GetMinSoC() int {
@@ -105,8 +105,7 @@ func (lp *Adapter) GetMinSoC() int {
 }
 
 func (lp *Adapter) SetMinSoC(val int) {
-	_, err := lp.send(cloud.SetMinSoC, &pb.EdgeRequest{Payload: &pb.Payload{IntVal: int64(val)}})
-	_ = err
+	_, _ = lp.send(cloud.SetMinSoC, &pb.BackendRequest{Payload: &pb.Payload{IntVal: int64(val)}})
 }
 
 func (lp *Adapter) GetPhases() int {
@@ -118,12 +117,12 @@ func (lp *Adapter) GetPhases() int {
 }
 
 func (lp *Adapter) SetPhases(val int) error {
-	_, err := lp.send(cloud.SetPhases, &pb.EdgeRequest{Payload: &pb.Payload{IntVal: int64(val)}})
+	_, err := lp.send(cloud.SetPhases, &pb.BackendRequest{Payload: &pb.Payload{IntVal: int64(val)}})
 	return err
 }
 
 func (lp *Adapter) SetTargetCharge(t time.Time, val int) {
-	_, err := lp.send(cloud.SetTargetCharge, &pb.EdgeRequest{Payload: &pb.Payload{
+	_, err := lp.send(cloud.SetTargetCharge, &pb.BackendRequest{Payload: &pb.Payload{
 		TimeVal: timestamppb.New(t),
 		IntVal:  int64(val),
 	}})
@@ -147,7 +146,7 @@ func (lp *Adapter) GetMinCurrent() float64 {
 }
 
 func (lp *Adapter) SetMinCurrent(val float64) {
-	_, err := lp.send(cloud.SetMinCurrent, &pb.EdgeRequest{Payload: &pb.Payload{FloatVal: val}})
+	_, err := lp.send(cloud.SetMinCurrent, &pb.BackendRequest{Payload: &pb.Payload{FloatVal: val}})
 	_ = err
 }
 
@@ -160,7 +159,7 @@ func (lp *Adapter) GetMaxCurrent() float64 {
 }
 
 func (lp *Adapter) SetMaxCurrent(val float64) {
-	_, err := lp.send(cloud.SetMaxCurrent, &pb.EdgeRequest{Payload: &pb.Payload{FloatVal: val}})
+	_, err := lp.send(cloud.SetMaxCurrent, &pb.BackendRequest{Payload: &pb.Payload{FloatVal: val}})
 	_ = err
 }
 
@@ -197,6 +196,5 @@ func (lp *Adapter) GetRemainingEnergy() float64 {
 }
 
 func (lp *Adapter) RemoteControl(_ string, demand loadpoint.RemoteDemand) {
-	_, err := lp.send(cloud.RemoteControl, &pb.EdgeRequest{Payload: &pb.Payload{StringVal: string(demand)}})
-	_ = err
+	_, _ = lp.send(cloud.RemoteControl, &pb.BackendRequest{Payload: &pb.Payload{StringVal: string(demand)}})
 }

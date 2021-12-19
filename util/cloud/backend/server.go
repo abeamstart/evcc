@@ -3,28 +3,86 @@ package backend
 import (
 	"bytes"
 	"encoding/gob"
+	"errors"
+	"fmt"
+	"sync"
 
 	"github.com/evcc-io/evcc/api/proto/pb"
 	"github.com/evcc-io/evcc/util"
+	"github.com/evcc-io/evcc/util/cloud"
+	"google.golang.org/grpc/peer"
 )
 
 type Server struct {
+	mu            sync.Mutex
 	log           *util.Logger
 	UpdateHandler func(util.Param)
 	pb.UnimplementedCloudConnectServiceServer
+	clients []*EdgeClient
 }
 
-func (s *Server) SubscribeEdgeRequest(req *pb.EdgeEnvironment, srv pb.CloudConnectService_SubscribeEdgeRequestServer) error {
-	// handle edge clients connecting
+type Sender interface {
+	Send(*pb.BackendRequest) error
+}
+
+type Receiver interface {
+	Receive(*pb.BackendRequest) error
+}
+
+type RoundTripper struct {
+	send Sender
+	recv Receiver
+}
+
+// SubscribeBackendRequest connects an edge client to the backend. The edge client will receive backend requests.
+func (s *Server) SubscribeBackendRequest(req *pb.EdgeEnvironment, srv pb.CloudConnectService_SubscribeBackendRequestServer) error {
+	fmt.Println("SubscribeBackendRequest")
+
+	rt := &RoundTripper{
+		send: srv,
+		recv: nil,
+	}
+
+	peer, ok := peer.FromContext(srv.Context())
+	if !ok {
+		return errors.New("missing peer info")
+	}
+	fmt.Println("peer:", peer)
+
+	client := NewEdgeClient(req, rt, peer)
+
+	srv.Send(&pb.BackendRequest{
+		Id:        1,
+		Api:       int32(cloud.Name),
+		Loadpoint: 1,
+	})
+
+	s.mu.Lock()
+	s.clients = append(s.clients, client)
+	s.mu.Unlock()
+
 	return nil
 }
 
+// SendEdgeResponse receives edge client responses in reply to backend requests.
 func (s *Server) SendEdgeResponse(inS pb.CloudConnectService_SendEdgeResponseServer) error {
 	for {
+		fmt.Println("SendEdgeResponse")
+
 		req, err := inS.Recv()
 		if err != nil {
+			fmt.Println("SendEdgeResponse", err)
 			return err
 		}
+
+		fmt.Println("SendEdgeResponse", req)
+
+		p, ok := peer.FromContext(inS.Context())
+		if !ok {
+			return errors.New("missing peer info")
+		}
+
+		_ = p
 		_ = req
 	}
 }
