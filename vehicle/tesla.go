@@ -100,7 +100,6 @@ func NewTeslaFromConfig(other map[string]interface{}) (api.Vehicle, error) {
 }
 
 func (v *Tesla) stream(log *util.Logger, client *tesla.Client) {
-	tesla.StreamParams = "soc,range"
 	bo := backoff.NewExponentialBackOff()
 
 	var mu sync.Mutex
@@ -110,12 +109,12 @@ func (v *Tesla) stream(log *util.Logger, client *tesla.Client) {
 			mu.Lock()
 			bo.Reset()
 			mu.Unlock()
-			fmt.Println(v)
+			fmt.Printf("%+v\n", v)
 		}
 	}()
 
 	for {
-		if err := client.Stream(v.vehicle.VehicleID, c); err != nil {
+		if err := client.Stream(v.vehicle.VehicleID, c, "soc", "range"); err != nil {
 			log.ERROR.Println(err)
 		}
 
