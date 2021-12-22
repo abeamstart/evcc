@@ -216,6 +216,10 @@ func run(cmd *cobra.Command, args []string) {
 		log.FATAL.Printf("connect startup complete")
 	}
 
+	if true {
+		// serverd := server.NewHTTPd("localhost:8080", site, socketHub, cache)
+	}
+
 	// create webserver
 	socketHub := server.NewSocketHub()
 	httpd := server.NewHTTPd(uri, site, socketHub, cache)

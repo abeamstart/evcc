@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"io/fs"
 	"net/http"
@@ -40,6 +41,43 @@ type HTTPd struct {
 	*http.Server
 }
 
+type ContextKey struct{}
+
+var (
+	CtxSite, CtxLoadpoint ContextKey
+)
+
+func siteHandlerContext(site site.API) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ctx := r.Context()
+			ctx = context.WithValue(ctx, CtxSite, site)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
+}
+
+func loadpointHandlerContext(lp int) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ctx := r.Context()
+			site, ok := ctx.Value(CtxSite).(site.API)
+			if !ok {
+				http.Error(w, "invalid site context", http.StatusInternalServerError)
+				return
+			}
+
+			if lp >= len(site.LoadPoints()) {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+
+			ctx = context.WithValue(ctx, CtxLoadpoint, site.LoadPoints()[lp])
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
+}
+
 // NewHTTPd creates HTTP server with configured routes for loadpoint
 func NewHTTPd(url string, site site.API, hub *SocketHub, cache *util.Cache) *HTTPd {
 	routes := map[string]route{
@@ -70,6 +108,7 @@ func NewHTTPd(url string, site site.API, hub *SocketHub, cache *util.Cache) *HTT
 			"Accept", "Accept-Language", "Content-Language", "Content-Type", "Origin",
 		}),
 	))
+	api.Use(siteHandlerContext(site))
 
 	// site api
 	for _, r := range routes {
@@ -77,23 +116,24 @@ func NewHTTPd(url string, site site.API, hub *SocketHub, cache *util.Cache) *HTT
 	}
 
 	// loadpoint api
-	for id, lp := range site.LoadPoints() {
-		lpAPI := api.PathPrefix(fmt.Sprintf("/loadpoints/%d", id)).Subrouter()
+	for lp := 0; lp <= 9; lp++ {
+		api := api.PathPrefix(fmt.Sprintf("/loadpoints/%d", lp)).Subrouter()
+		api.Use(loadpointHandlerContext(lp))
 
 		routes := map[string]route{
-			"mode":          {[]string{"POST", "OPTIONS"}, "/mode/{value:[a-z]+}", chargeModeHandler(lp)},
-			"targetsoc":     {[]string{"POST", "OPTIONS"}, "/targetsoc/{value:[0-9]+}", targetSoCHandler(lp)},
-			"minsoc":        {[]string{"POST", "OPTIONS"}, "/minsoc/{value:[0-9]+}", minSoCHandler(lp)},
-			"mincurrent":    {[]string{"POST", "OPTIONS"}, "/mincurrent/{value:[0-9]+}", minCurrentHandler(lp)},
-			"maxcurrent":    {[]string{"POST", "OPTIONS"}, "/maxcurrent/{value:[0-9]+}", maxCurrentHandler(lp)},
-			"phases":        {[]string{"POST", "OPTIONS"}, "/phases/{value:[0-9]+}", phasesHandler(lp)},
-			"targetcharge":  {[]string{"POST", "OPTIONS"}, "/targetcharge/{soc:[0-9]+}/{time:[0-9TZ:-]+}", targetChargeHandler(lp)},
-			"targetcharge2": {[]string{"DELETE", "OPTIONS"}, "/targetcharge", targetChargeRemoveHandler(lp)},
-			"remotedemand":  {[]string{"POST", "OPTIONS"}, "/remotedemand/{demand:[a-z]+}/{source::[0-9a-zA-Z_-]+}", remoteDemandHandler(lp)},
+			"mode":          {[]string{"POST", "OPTIONS"}, "/mode/{value:[a-z]+}", chargeModeHandler},
+			"targetsoc":     {[]string{"POST", "OPTIONS"}, "/targetsoc/{value:[0-9]+}", targetSoCHandler},
+			"minsoc":        {[]string{"POST", "OPTIONS"}, "/minsoc/{value:[0-9]+}", minSoCHandler},
+			"mincurrent":    {[]string{"POST", "OPTIONS"}, "/mincurrent/{value:[0-9]+}", minCurrentHandler},
+			"maxcurrent":    {[]string{"POST", "OPTIONS"}, "/maxcurrent/{value:[0-9]+}", maxCurrentHandler},
+			"phases":        {[]string{"POST", "OPTIONS"}, "/phases/{value:[0-9]+}", phasesHandler},
+			"targetcharge":  {[]string{"POST", "OPTIONS"}, "/targetcharge/{soc:[0-9]+}/{time:[0-9TZ:-]+}", targetChargeHandler},
+			"targetcharge2": {[]string{"DELETE", "OPTIONS"}, "/targetcharge", targetChargeRemoveHandler},
+			"remotedemand":  {[]string{"POST", "OPTIONS"}, "/remotedemand/{demand:[a-z]+}/{source::[0-9a-zA-Z_-]+}", remoteDemandHandler},
 		}
 
 		for _, r := range routes {
-			lpAPI.Methods(r.Methods...).Path(r.Pattern).Handler(r.HandlerFunc)
+			api.Methods(r.Methods...).Path(r.Pattern).Handler(r.HandlerFunc)
 		}
 	}
 

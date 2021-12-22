@@ -70,7 +70,7 @@ func jsonError(w http.ResponseWriter, status int, err error) {
 func healthHandler(site site.API) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !site.Healthy() {
-			w.WriteHeader(http.StatusInternalServerError)
+			http.Error(w, "invalid loadpoint context", http.StatusInternalServerError)
 			return
 		}
 
@@ -91,133 +91,168 @@ func stateHandler(cache *util.Cache) http.HandlerFunc {
 }
 
 // chargeModeHandler updates charge mode
-func chargeModeHandler(lp loadpoint.API) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		vars := mux.Vars(r)
-
-		mode, err := api.ChargeModeString(vars["value"])
-		if err != nil {
-			jsonError(w, http.StatusBadRequest, err)
-			return
-		}
-
-		lp.SetMode(mode)
-
-		jsonResult(w, lp.GetMode())
+func chargeModeHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	lp, ok := ctx.Value(CtxLoadpoint).(loadpoint.API)
+	if !ok {
+		http.Error(w, "invalid loadpoint context", http.StatusInternalServerError)
+		return
 	}
+
+	vars := mux.Vars(r)
+
+	mode, err := api.ChargeModeString(vars["value"])
+	if err != nil {
+		jsonError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	lp.SetMode(mode)
+
+	jsonResult(w, lp.GetMode())
 }
 
 // targetSoCHandler updates target soc
-func targetSoCHandler(lp loadpoint.API) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		vars := mux.Vars(r)
-
-		soc, err := strconv.ParseInt(vars["value"], 10, 32)
-		if err == nil {
-			lp.SetTargetSoC(int(soc))
-		} else {
-			jsonError(w, http.StatusBadRequest, err)
-			return
-		}
-
-		jsonResult(w, lp.GetTargetSoC())
+func targetSoCHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	lp, ok := ctx.Value(CtxLoadpoint).(loadpoint.API)
+	if !ok {
+		http.Error(w, "invalid loadpoint context", http.StatusInternalServerError)
+		return
 	}
+
+	vars := mux.Vars(r)
+
+	soc, err := strconv.ParseInt(vars["value"], 10, 32)
+	if err == nil {
+		lp.SetTargetSoC(int(soc))
+	} else {
+		jsonError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	jsonResult(w, lp.GetTargetSoC())
 }
 
 // minSoCHandler updates minimum soc
-func minSoCHandler(lp loadpoint.API) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		vars := mux.Vars(r)
-
-		soc, err := strconv.ParseInt(vars["value"], 10, 32)
-		if err == nil {
-			lp.SetMinSoC(int(soc))
-		} else {
-			jsonError(w, http.StatusBadRequest, err)
-			return
-		}
-
-		jsonResult(w, lp.GetMinSoC())
+func minSoCHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	lp, ok := ctx.Value(CtxLoadpoint).(loadpoint.API)
+	if !ok {
+		http.Error(w, "invalid loadpoint context", http.StatusInternalServerError)
+		return
 	}
+
+	vars := mux.Vars(r)
+
+	soc, err := strconv.ParseInt(vars["value"], 10, 32)
+	if err == nil {
+		lp.SetMinSoC(int(soc))
+	} else {
+		jsonError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	jsonResult(w, lp.GetMinSoC())
 }
 
 // minCurrentHandler updates minimum current
-func minCurrentHandler(lp loadpoint.API) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		vars := mux.Vars(r)
-
-		current, err := strconv.ParseFloat(vars["value"], 64)
-		if err == nil {
-			lp.SetMinCurrent(current)
-		} else {
-			jsonError(w, http.StatusBadRequest, err)
-			return
-		}
-
-		jsonResult(w, lp.GetMinCurrent())
+func minCurrentHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	lp, ok := ctx.Value(CtxLoadpoint).(loadpoint.API)
+	if !ok {
+		http.Error(w, "invalid loadpoint context", http.StatusInternalServerError)
+		return
 	}
+
+	vars := mux.Vars(r)
+
+	current, err := strconv.ParseFloat(vars["value"], 64)
+	if err == nil {
+		lp.SetMinCurrent(current)
+	} else {
+		jsonError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	jsonResult(w, lp.GetMinCurrent())
 }
 
 // maxCurrentHandler updates maximum current
-func maxCurrentHandler(lp loadpoint.API) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		vars := mux.Vars(r)
-
-		current, err := strconv.ParseFloat(vars["value"], 64)
-		if err == nil {
-			lp.SetMaxCurrent(current)
-		} else {
-			jsonError(w, http.StatusBadRequest, err)
-			return
-		}
-
-		jsonResult(w, lp.GetMaxCurrent())
+func maxCurrentHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	lp, ok := ctx.Value(CtxLoadpoint).(loadpoint.API)
+	if !ok {
+		http.Error(w, "invalid loadpoint context", http.StatusInternalServerError)
+		return
 	}
+
+	vars := mux.Vars(r)
+
+	current, err := strconv.ParseFloat(vars["value"], 64)
+	if err == nil {
+		lp.SetMaxCurrent(current)
+	} else {
+		jsonError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	jsonResult(w, lp.GetMaxCurrent())
 }
 
 // phasesHandler updates minimum soc
-func phasesHandler(lp loadpoint.API) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		vars := mux.Vars(r)
-
-		phases, err := strconv.ParseInt(vars["value"], 10, 32)
-		if err == nil {
-			err = lp.SetPhases(int(phases))
-		}
-
-		if err != nil {
-			jsonError(w, http.StatusBadRequest, err)
-			return
-		}
-
-		jsonResult(w, lp.GetPhases())
+func phasesHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	lp, ok := ctx.Value(CtxLoadpoint).(loadpoint.API)
+	if !ok {
+		http.Error(w, "invalid loadpoint context", http.StatusInternalServerError)
+		return
 	}
+
+	vars := mux.Vars(r)
+
+	phases, err := strconv.ParseInt(vars["value"], 10, 32)
+	if err == nil {
+		err = lp.SetPhases(int(phases))
+	}
+
+	if err != nil {
+		jsonError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	jsonResult(w, lp.GetPhases())
 }
 
 // remoteDemandHandler updates minimum soc
-func remoteDemandHandler(lp loadpoint.API) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		vars := mux.Vars(r)
-
-		source := vars["source"]
-		demand, err := loadpoint.RemoteDemandString(vars["demand"])
-		if err != nil {
-			jsonError(w, http.StatusBadRequest, err)
-			return
-		}
-
-		lp.RemoteControl(source, demand)
-
-		res := struct {
-			Demand loadpoint.RemoteDemand `json:"demand"`
-			Source string                 `json:"source"`
-		}{
-			Source: source,
-			Demand: demand,
-		}
-
-		jsonResult(w, res)
+func remoteDemandHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	lp, ok := ctx.Value(CtxLoadpoint).(loadpoint.API)
+	if !ok {
+		http.Error(w, "invalid loadpoint context", http.StatusInternalServerError)
+		return
 	}
+
+	vars := mux.Vars(r)
+
+	source := vars["source"]
+	demand, err := loadpoint.RemoteDemandString(vars["demand"])
+	if err != nil {
+		jsonError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	lp.RemoteControl(source, demand)
+
+	res := struct {
+		Demand loadpoint.RemoteDemand `json:"demand"`
+		Source string                 `json:"source"`
+	}{
+		Source: source,
+		Demand: demand,
+	}
+
+	jsonResult(w, res)
 }
 
 func timezone() *time.Location {
@@ -231,47 +266,57 @@ func timezone() *time.Location {
 }
 
 // targetChargeHandler updates target soc
-func targetChargeHandler(loadpoint loadpoint.API) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		vars := mux.Vars(r)
-
-		socS, ok := vars["soc"]
-		socV, err := strconv.ParseInt(socS, 10, 32)
-
-		if !ok || err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-
-		timeS, ok := vars["time"]
-		timeV, err := time.ParseInLocation("2006-01-02T15:04:05", timeS, timezone())
-
-		if !ok || err != nil {
-			jsonError(w, http.StatusBadRequest, err)
-			return
-		}
-
-		loadpoint.SetTargetCharge(timeV, int(socV))
-
-		res := struct {
-			SoC  int64     `json:"soc"`
-			Time time.Time `json:"time"`
-		}{
-			SoC:  socV,
-			Time: timeV,
-		}
-
-		jsonResult(w, res)
+func targetChargeHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	lp, ok := ctx.Value(CtxLoadpoint).(loadpoint.API)
+	if !ok {
+		http.Error(w, "invalid loadpoint context", http.StatusInternalServerError)
+		return
 	}
+
+	vars := mux.Vars(r)
+
+	socS, ok := vars["soc"]
+	socV, err := strconv.ParseInt(socS, 10, 32)
+
+	if !ok || err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	timeS, ok := vars["time"]
+	timeV, err := time.ParseInLocation("2006-01-02T15:04:05", timeS, timezone())
+
+	if !ok || err != nil {
+		jsonError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	lp.SetTargetCharge(timeV, int(socV))
+
+	res := struct {
+		SoC  int64     `json:"soc"`
+		Time time.Time `json:"time"`
+	}{
+		SoC:  socV,
+		Time: timeV,
+	}
+
+	jsonResult(w, res)
 }
 
 // targetChargeRemoveHandler removes target soc
-func targetChargeRemoveHandler(loadpoint loadpoint.API) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		loadpoint.SetTargetCharge(time.Time{}, 0)
-		res := struct{}{}
-		jsonResult(w, res)
+func targetChargeRemoveHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	lp, ok := ctx.Value(CtxLoadpoint).(loadpoint.API)
+	if !ok {
+		http.Error(w, "invalid loadpoint context", http.StatusInternalServerError)
+		return
 	}
+
+	lp.SetTargetCharge(time.Time{}, 0)
+	res := struct{}{}
+	jsonResult(w, res)
 }
 
 // socketHandler attaches websocket handler to uri
