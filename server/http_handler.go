@@ -15,6 +15,7 @@ import (
 	"github.com/evcc-io/evcc/core/site"
 	"github.com/evcc-io/evcc/util"
 	"github.com/gorilla/mux"
+	"github.com/thoas/go-funk"
 )
 
 func indexHandler(site site.API) http.HandlerFunc {
@@ -87,10 +88,32 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 // stateHandler returns current charge mode
 func stateHandler(cache *util.Cache) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		res := cache.State()
-		for _, k := range []string{"availableVersion", "releaseNotes"} {
-			delete(res, k)
+		res := map[string]interface{}{}
+		lps := make(map[int]map[string]interface{})
+
+		for _, param := range cache.All() {
+			if param.LoadPoint == nil {
+				if funk.ContainsString([]string{"availableVersion", "releaseNotes"}, param.Key) {
+					continue
+				}
+				res[param.Key] = param.Val
+			} else {
+				lp, ok := lps[*param.LoadPoint]
+				if !ok {
+					lp = make(map[string]interface{})
+					lps[*param.LoadPoint] = lp
+				}
+				lp[param.Key] = param.Val
+			}
 		}
+
+		// convert map to array
+		loadpoints := make([]map[string]interface{}, len(lps))
+		for id, lp := range lps {
+			loadpoints[id] = lp
+		}
+		res["loadpoints"] = loadpoints
+
 		jsonResult(w, res)
 	}
 }

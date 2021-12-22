@@ -27,38 +27,6 @@ func (c *Cache) Run(in <-chan Param) {
 	}
 }
 
-// State provides a structured copy of the cached values
-// Loadpoints are aggregated as loadpoints array
-func (c *Cache) State() map[string]interface{} {
-	c.Lock()
-	defer c.Unlock()
-
-	res := map[string]interface{}{}
-	lps := make(map[int]map[string]interface{})
-
-	for _, param := range c.val {
-		if param.LoadPoint == nil {
-			res[param.Key] = param.Val
-		} else {
-			lp, ok := lps[*param.LoadPoint]
-			if !ok {
-				lp = make(map[string]interface{})
-				lps[*param.LoadPoint] = lp
-			}
-			lp[param.Key] = param.Val
-		}
-	}
-
-	// convert map to array
-	loadpoints := make([]map[string]interface{}, len(lps))
-	for id, lp := range lps {
-		loadpoints[id] = lp
-	}
-	res["loadpoints"] = loadpoints
-
-	return res
-}
-
 // All provides a copy of the cached values
 func (c *Cache) All() []Param {
 	c.Lock()
