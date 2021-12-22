@@ -67,12 +67,13 @@ func loadpointHandlerContext(lp int) func(http.Handler) http.Handler {
 				return
 			}
 
-			if lp >= len(site.LoadPoints()) {
+			loadpoints := site.LoadPoints()
+			if lp >= len(loadpoints) {
 				w.WriteHeader(http.StatusNotFound)
 				return
 			}
 
-			ctx = context.WithValue(ctx, CtxLoadpoint, site.LoadPoints()[lp])
+			ctx = context.WithValue(ctx, CtxLoadpoint, loadpoints[lp])
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
