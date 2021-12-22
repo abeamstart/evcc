@@ -81,11 +81,6 @@ func loadpointHandlerContext(lp int) func(http.Handler) http.Handler {
 
 // NewHTTPd creates HTTP server with configured routes for loadpoint
 func NewHTTPd(url string, site site.API, hub *SocketHub, cache *util.Cache) *HTTPd {
-	routes := map[string]route{
-		"health": {[]string{"GET"}, "/health", healthHandler(site)},
-		"state":  {[]string{"GET"}, "/state", stateHandler(cache)},
-	}
-
 	router := mux.NewRouter().StrictSlash(true)
 
 	// websocket
@@ -112,6 +107,11 @@ func NewHTTPd(url string, site site.API, hub *SocketHub, cache *util.Cache) *HTT
 	api.Use(siteHandlerContext(site))
 
 	// site api
+	routes := map[string]route{
+		"health": {[]string{"GET"}, "/health", healthHandler},
+		"state":  {[]string{"GET"}, "/state", stateHandler(cache)},
+	}
+
 	for _, r := range routes {
 		api.Methods(r.Methods...).Path(r.Pattern).Handler(r.HandlerFunc)
 	}

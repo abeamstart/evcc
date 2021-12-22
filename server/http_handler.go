@@ -67,16 +67,21 @@ func jsonError(w http.ResponseWriter, status int, err error) {
 }
 
 // healthHandler returns current charge mode
-func healthHandler(site site.API) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if !site.Healthy() {
-			http.Error(w, "invalid loadpoint context", http.StatusInternalServerError)
-			return
-		}
-
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprintln(w, "OK")
+func healthHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	site, ok := ctx.Value(CtxSite).(site.API)
+	if !ok {
+		http.Error(w, "invalid site context", http.StatusInternalServerError)
+		return
 	}
+
+	if !site.Healthy() {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintln(w, "OK")
 }
 
 // stateHandler returns current charge mode
