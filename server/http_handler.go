@@ -320,8 +320,7 @@ func targetChargeRemoveHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	lp.SetTargetCharge(time.Time{}, 0)
-	res := struct{}{}
-	jsonResult(w, res)
+	jsonResult(w, struct{}{})
 }
 
 // socketHandler attaches websocket handler to uri
