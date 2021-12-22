@@ -4,6 +4,7 @@
 package server
 
 import (
+	"context"
 	"errors"
 	"net"
 	"net/http"
@@ -39,7 +40,9 @@ func HealthListener(site site.API, exitC <-chan struct{}) {
 
 	mux := http.NewServeMux()
 	httpd := http.Server{Handler: mux}
-	mux.HandleFunc("/health", healthHandler(site))
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		healthHandler(w, r.WithContext(context.WithValue(r.Context(), CtxSite, site)))
+	})
 
 	go func() { _ = httpd.Serve(l) }()
 
