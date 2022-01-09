@@ -108,6 +108,7 @@ type ChargerEx interface {
 
 // ChargePhases provides 1p3p switching
 type ChargePhases interface {
+	Phases() (int, error)
 	Phases1p3p(phases int) error
 }
 

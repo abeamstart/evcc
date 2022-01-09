@@ -231,6 +231,15 @@ func (wb *Alfen) Currents() (float64, float64, float64, error) {
 
 var _ api.ChargePhases = (*Alfen)(nil)
 
+// Phases implements the api.ChargePhases interface
+func (c *Alfen) Phases() (int, error) {
+	b, err := c.conn.ReadHoldingRegisters(alfenRegPhases, 1)
+	if err != nil {
+		return 0, err
+	}
+	return int(binary.BigEndian.Uint16(b)), nil
+}
+
 // Phases1p3p implements the api.ChargePhases interface
 func (c *Alfen) Phases1p3p(phases int) error {
 	_, err := c.conn.WriteSingleRegister(alfenRegPhases, uint16(phases))

@@ -1,5 +1,10 @@
 package goe
 
+// Phases is the optional v2 api that returns the enabled phases
+type Phases interface {
+	Phases() int
+}
+
 // StatusResponse2 is the v2 API response
 type StatusResponse2 struct {
 	Fwv   string    // firmware version
@@ -62,4 +67,8 @@ func (g *StatusResponse2) Identify() string {
 	}
 
 	return ""
+}
+
+func (g *StatusResponse2) Phases() int {
+	return g.Psm
 }
