@@ -10,34 +10,43 @@ import (
 
 // chargerCmd represents the charger command
 var chargerCmd = &cobra.Command{
-	Use:   "charger [name]",
-	Short: "Query configured chargers",
-	Run:   runCharger,
+	Use:               "charger [name]",
+	Short:             "Query configured chargers or set parameters",
+	PersistentPreRunE: chargerConfig,
+	Run:               chargerRun,
+}
+
+var chargerSetCmd = &cobra.Command{
+	Use:   "set [name]",
+	Short: "Set charger parameters",
+	Run:   runChargerSet,
 }
 
 func init() {
 	rootCmd.AddCommand(chargerCmd)
+	chargerCmd.AddCommand(chargerSetCmd)
 }
 
-func runCharger(cmd *cobra.Command, args []string) {
+func chargerConfig(cmd *cobra.Command, args []string) error {
 	util.LogLevel(viper.GetString("log"), viper.GetStringMapString("levels"))
 	log.INFO.Printf("evcc %s (%s)", server.Version, server.Commit)
 
 	// load config
 	conf, err := loadConfigFile(cfgFile)
-	if err != nil {
-		log.FATAL.Fatal(err)
-	}
 
 	// setup environment
-	if err := configureEnvironment(conf); err != nil {
-		log.FATAL.Fatal(err)
+	if err == nil {
+		err = configureEnvironment(conf)
 	}
 
-	if err := cp.configureChargers(conf); err != nil {
-		log.FATAL.Fatal(err)
+	if err == nil {
+		err = cp.configureChargers(conf)
 	}
 
+	return err
+}
+
+func chargerRun(cmd *cobra.Command, args []string) {
 	chargers := cp.chargers
 	if len(args) == 1 {
 		arg := args[0]
