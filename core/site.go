@@ -17,7 +17,7 @@ import (
 
 // Updater abstracts the LoadPoint implementation for testing
 type Updater interface {
-	Update(availablePower float64, cheapRate bool, batteryBuffered bool)
+	Update(availablePower float64, constrainedMaxCurrent float64, cheapRate bool, batteryBuffered bool)
 }
 
 // Site is the main configuration container. A site can host multiple loadpoints.
@@ -411,7 +411,7 @@ func (site *Site) update(lp Updater) {
 	var activeLps int
 	for _, lp := range site.loadpoints {
 		totalChargePower += lp.GetChargePower()
-		if lp.enabled {
+		if lp.enabled && lp.GetStatus() == api.StatusB || lp.GetStatus() == api.StatusC {
 			activeLps++
 		}
 	}
