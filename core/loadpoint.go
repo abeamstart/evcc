@@ -109,9 +109,10 @@ type LoadPoint struct {
 	ResetOnDisconnect bool `mapstructure:"resetOnDisconnect"`
 	onDisconnect      api.ActionConfig
 
-	MinCurrent    float64       // PV mode: start current	Min+PV mode: min current
-	MaxCurrent    float64       // Max allowed current. Physically ensured by the charger
-	GuardDuration time.Duration // charger enable/disable minimum holding time
+	MinCurrent       float64       // PV mode: start current	Min+PV mode: min current
+	MaxCurrent       float64       // Max allowed current. Physically ensured by the charger
+	ConstrainCurrent float64       // Current reduction forced by active load management
+	GuardDuration    time.Duration // charger enable/disable minimum holding time
 
 	enabled                bool      // Charger enabled state
 	activePhases           int       // Charger active phases as used by vehicle
@@ -558,6 +559,12 @@ func (lp *LoadPoint) syncCharger() {
 
 // setLimit applies charger current limits and enables/disables accordingly
 func (lp *LoadPoint) setLimit(chargeCurrent float64, force bool) error {
+	// apply constrain current
+	if lp.ConstrainCurrent < 0 {
+		chargeCurrent += lp.ConstrainCurrent
+		// TODO: make sure to switch off immediately if required
+	}
+
 	// set current
 	if chargeCurrent != lp.chargeCurrent && chargeCurrent >= lp.GetMinCurrent() {
 		var err error
@@ -1359,7 +1366,7 @@ func (lp *LoadPoint) publishSoCAndRange() {
 }
 
 // Update is the main control function. It reevaluates meters and charger state
-func (lp *LoadPoint) Update(sitePower float64, constrainedMaxCurrent float64, cheap bool, batteryBuffered bool) {
+func (lp *LoadPoint) Update(sitePower float64, constrainCurrent float64, cheap bool, batteryBuffered bool) {
 	mode := lp.GetMode()
 	lp.publish("mode", mode)
 
@@ -1412,9 +1419,7 @@ func (lp *LoadPoint) Update(sitePower float64, constrainedMaxCurrent float64, ch
 	lp.socTimer.MustValidateDemand()
 
 	// apply only limiting (=negative) current constraints
-	if constrainedMaxCurrent > 0 {
-		constrainedMaxCurrent = 0
-	}
+	lp.ConstrainCurrent = constrainCurrent
 
 	// execute loading strategy
 	switch {
@@ -1444,21 +1449,21 @@ func (lp *LoadPoint) Update(sitePower float64, constrainedMaxCurrent float64, ch
 	case lp.minSocNotReached():
 		// 3p if available
 		if err = lp.scalePhasesIfAvailable(3); err == nil {
-			err = lp.setLimit(lp.GetMaxCurrent()+constrainedMaxCurrent, true)
+			err = lp.setLimit(lp.GetMaxCurrent(), true)
 		}
 		lp.elapsePVTimer() // let PV mode disable immediately afterwards
 
 	case mode == api.ModeNow:
 		// 3p if available
 		if err = lp.scalePhasesIfAvailable(3); err == nil {
-			err = lp.setLimit(lp.GetMaxCurrent()+constrainedMaxCurrent, true)
+			err = lp.setLimit(lp.GetMaxCurrent(), true)
 		}
 
 	// target charging
 	case lp.socTimer.DemandActive():
 		// 3p if available
 		if err = lp.scalePhasesIfAvailable(3); err == nil {
-			targetCurrent := lp.socTimer.Handle() + constrainedMaxCurrent
+			targetCurrent := lp.socTimer.Handle()
 			err = lp.setLimit(targetCurrent, true)
 		}
 
@@ -1474,7 +1479,7 @@ func (lp *LoadPoint) Update(sitePower float64, constrainedMaxCurrent float64, ch
 
 		// tariff
 		if cheap {
-			targetCurrent = lp.GetMaxCurrent() + constrainedMaxCurrent
+			targetCurrent = lp.GetMaxCurrent()
 			lp.log.DEBUG.Printf("cheap tariff: %.3gA", targetCurrent)
 			required = true
 		}
