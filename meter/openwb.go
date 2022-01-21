@@ -50,9 +50,19 @@ func NewOpenWBFromConfig(other map[string]interface{}) (api.Meter, error) {
 		return to.BoolGetter(g)
 	}
 
-	floatG := func(topic string) func() (float64, error) {
+	floatG := func(topic string, scaler ...float64) func() (float64, error) {
 		g := provider.NewMqtt(log, client, topic, 1, 0).FloatGetter()
-		return to.FloatGetter(g)
+		gg := to.FloatGetter(g)
+
+		scale := 1.0
+		if len(scaler) > 0 {
+			scale = scaler[0]
+		}
+
+		return func() (float64, error) {
+			v, err := gg()
+			return scale * v, err
+		}
 	}
 
 	var power func() (float64, error)
