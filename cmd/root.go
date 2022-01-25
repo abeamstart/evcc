@@ -67,11 +67,11 @@ func init() {
 	configureCommand(rootCmd)
 
 	rootCmd.PersistentFlags().StringP(
-		"uri", "u",
-		"0.0.0.0:7070",
+		"listen", "l",
+		":7070",
 		"Listen address",
 	)
-	bind(rootCmd, "uri")
+	bind(rootCmd, "listen")
 
 	rootCmd.PersistentFlags().DurationP(
 		"interval", "i",
@@ -150,8 +150,8 @@ func run(cmd *cobra.Command, args []string) {
 
 	util.LogLevel(viper.GetString("log"), viper.GetStringMapString("levels"))
 
-	uri := viper.GetString("uri")
-	log.INFO.Println("listening at", uri)
+	listen := viper.GetString("listen")
+	log.INFO.Println("listening at", listen)
 
 	// setup environment
 	if err := configureEnvironment(conf); err != nil {
@@ -186,7 +186,7 @@ func run(cmd *cobra.Command, args []string) {
 
 	// create webserver
 	socketHub := server.NewSocketHub()
-	httpd := server.NewHTTPd(uri, site, socketHub, cache)
+	httpd := server.NewHTTPd(listen, site, socketHub, cache)
 
 	// allow web access for vehicles
 	cp.webControl(httpd)

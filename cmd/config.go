@@ -19,7 +19,9 @@ import (
 )
 
 type config struct {
-	URI          string
+	Listen       string // listen address as (host):port
+	Public       string // public URI, including protocol
+	URI          string // deprecated
 	Log          string
 	SponsorToken string
 	Metrics      bool
