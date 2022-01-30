@@ -160,6 +160,29 @@ func ProtocolFromRTU(rtu *bool) Protocol {
 	return Tcp
 }
 
+func NewTcpConnection(uri string, proto Protocol, slaveID uint8) (*Connection, error) {
+	if uri == "" {
+		return nil, errors.New("invalid modbus configuration: uri required")
+	}
+
+	uri = util.DefaultPort(uri, 502)
+
+	var conn meters.Connection
+	switch proto {
+	case Rtu:
+		conn = registeredConnection(uri, meters.NewRTUOverTCP(uri))
+	case Ascii:
+		conn = registeredConnection(uri, meters.NewASCIIOverTCP(uri))
+	default:
+		conn = registeredConnection(uri, meters.NewTCP(uri))
+	}
+
+	return &Connection{
+		slaveID: slaveID,
+		conn:    conn,
+	}, nil
+}
+
 // NewConnection creates physical modbus device from config
 func NewConnection(uri, device, comset string, baudrate int, proto Protocol, slaveID uint8) (*Connection, error) {
 	var conn meters.Connection
@@ -167,6 +190,8 @@ func NewConnection(uri, device, comset string, baudrate int, proto Protocol, sla
 	if device != "" && uri != "" {
 		return nil, errors.New("invalid modbus configuration: can only have either uri or device")
 	}
+
+	var err error
 
 	if device != "" {
 		switch strings.ToUpper(comset) {
@@ -189,16 +214,7 @@ func NewConnection(uri, device, comset string, baudrate int, proto Protocol, sla
 	}
 
 	if uri != "" {
-		uri = util.DefaultPort(uri, 502)
-
-		switch proto {
-		case Rtu:
-			conn = registeredConnection(uri, meters.NewRTUOverTCP(uri))
-		case Ascii:
-			conn = registeredConnection(uri, meters.NewASCIIOverTCP(uri))
-		default:
-			conn = registeredConnection(uri, meters.NewTCP(uri))
-		}
+		conn, err = NewTcpConnection(uri, proto, slaveID)
 	}
 
 	if conn == nil {
