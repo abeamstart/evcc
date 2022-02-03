@@ -5,7 +5,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	_ "embed"
-	"fmt"
+	"errors"
 	"strings"
 
 	"google.golang.org/grpc"
@@ -15,9 +15,7 @@ import (
 
 var Host = "cloud.evcc.io:8080"
 
-var (
-	conn *grpc.ClientConn
-)
+var conn *grpc.ClientConn
 
 //go:embed ca-cert.pem
 var caCert []byte
@@ -28,9 +26,13 @@ func caPEM() []byte {
 }
 
 func loadTLSCredentials() (*tls.Config, error) {
-	certPool := x509.NewCertPool()
+	certPool, err := x509.SystemCertPool()
+	if err != nil {
+		return nil, err
+	}
+
 	if !certPool.AppendCertsFromPEM(caPEM()) {
-		return nil, fmt.Errorf("failed to add CA certificate")
+		return nil, errors.New("failed to add CA certificate")
 	}
 
 	// create the credentials and return it
