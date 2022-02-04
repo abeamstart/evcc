@@ -1,6 +1,6 @@
 name: Nightly Build
 
-on: 
+on:
   schedule: # runs on the default branch: master
     - cron: '0 2 * * *' # run at 2 AM UTC
   workflow_dispatch:
@@ -21,7 +21,7 @@ jobs:
         name: check latest commit is less than a day
         if: ${{ github.event_name == 'schedule' }}
         run: test -z $(git rev-list  --after="24 hours"  ${{ github.sha }}) && echo "::set-output name=should_run::false"
-  
+
   call-build-workflow:
     name: Call Build
     needs: check_date
@@ -82,9 +82,9 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v2
       with:
-        go-version: ^1.16
+        go-version: ^1.18
       id: go
-      
+
     - name: Set up Node
       uses: actions/setup-node@v2
       with:
@@ -112,7 +112,7 @@ jobs:
       run: |
         for filename in release/*.deb; do
           # goreleaser creates armel packages for armv6, which is wrong
-          # until this is fixed, ignore armv6 
+          # until this is fixed, ignore armv6
           if [[ "$filename" == *"armv6"* ]]; then
             echo "Skipping $filename"
             continue
