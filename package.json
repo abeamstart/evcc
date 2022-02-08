@@ -28,11 +28,11 @@
     "vue-router": "^3.5.3"
   },
   "devDependencies": {
-    "@storybook/addon-actions": "^6.5.0-alpha.9",
-    "@storybook/addon-essentials": "^6.5.0-alpha.9",
-    "@storybook/addon-links": "^6.5.0-alpha.9",
+    "@storybook/addon-actions": "^6.5.0-alpha.34",
+    "@storybook/addon-essentials": "^6.5.0-alpha.34",
+    "@storybook/addon-links": "^6.5.0-alpha.34",
     "@storybook/addon-postcss": "^2.0.0",
-    "@storybook/vue": "^6.5.0-alpha.9",
+    "@storybook/vue": "^6.5.0-alpha.34",
     "@vue/cli-plugin-unit-jest": "^4.5.15",
     "@vue/cli-service": "^4.5.15",
     "@vue/component-compiler-utils": "^3.3.0",
