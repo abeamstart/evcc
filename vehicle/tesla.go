@@ -27,6 +27,8 @@ func init() {
 	registry.Add("tesla", NewTeslaFromConfig)
 }
 
+var teslaClients = make(map[string]*tesla.Client)
+
 // NewTeslaFromConfig creates a new vehicle
 func NewTeslaFromConfig(other map[string]interface{}) (api.Vehicle, error) {
 	cc := struct {
@@ -50,19 +52,24 @@ func NewTeslaFromConfig(other map[string]interface{}) (api.Vehicle, error) {
 		embed: &cc.embed,
 	}
 
-	// authenticated http client with logging injected to the Tesla client
-	log := util.NewLogger("tesla").Redact(cc.Tokens.Access, cc.Tokens.Refresh)
-	ctx := context.WithValue(context.Background(), oauth2.HTTPClient, request.NewHelper(log).Client)
+	client, ok := teslaClients[cc.Tokens.Refresh]
+	if !ok {
+		// logging http client injected to the Tesla client
+		log := util.NewLogger("tesla").Redact(cc.Tokens.Access, cc.Tokens.Refresh)
+		ctx := context.WithValue(context.Background(), oauth2.HTTPClient, request.NewHelper(log).Client)
 
-	options := []tesla.ClientOption{tesla.WithToken(&oauth2.Token{
-		AccessToken:  cc.Tokens.Access,
-		RefreshToken: cc.Tokens.Refresh,
-		Expiry:       time.Now(),
-	})}
+		options := []tesla.ClientOption{tesla.WithToken(&oauth2.Token{
+			// AccessToken:  cc.Tokens.Access,
+			RefreshToken: cc.Tokens.Refresh,
+			Expiry:       time.Now(),
+		})}
 
-	client, err := tesla.NewClient(ctx, options...)
-	if err != nil {
-		return nil, err
+		var err error
+		if client, err = tesla.NewClient(ctx, options...); err != nil {
+			return nil, err
+		}
+
+		teslaClients[cc.Tokens.Refresh] = client
 	}
 
 	vehicles, err := client.Vehicles()
