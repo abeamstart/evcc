@@ -134,7 +134,6 @@ type LoadPoint struct {
 	vehicles     []api.Vehicle // Assigned vehicles
 	socEstimator *soc.Estimator
 
-	targetSoC    int
 	targetTime   time.Time
 	timePlanner  *planner.Timer
 	pricePlanner *planner.Pricer

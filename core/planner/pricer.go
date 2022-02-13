@@ -58,8 +58,8 @@ func (p *Pricer) Active() bool {
 		return false
 	}
 
-	requiredDuration := time.Duration(float64(se.AssumedChargeDuration(p.TargetSoc(), p.GetMaxPower())) / soc.ChargeEfficiency)
-	targetTime := p.TargetTime()
+	requiredDuration := time.Duration(float64(se.AssumedChargeDuration(p.GetTargetSoC(), p.GetMaxPower())) / soc.ChargeEfficiency)
+	targetTime := p.GetTargetTime()
 
 	if targetTime.Before(p.clock.Now()) || requiredDuration <= 0 {
 		return false

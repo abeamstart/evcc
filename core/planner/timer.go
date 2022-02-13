@@ -16,10 +16,8 @@ const (
 // Timer is the target charging handler
 type Timer struct {
 	Adapter
-	log     *util.Logger
-	current float64
-	// SoC       int
-	// Time      time.Time
+	log       *util.Logger
+	current   float64
 	finishAt  time.Time
 	active    bool
 	validated bool
@@ -64,7 +62,7 @@ func (p *Timer) RemainingDuration() time.Duration {
 		power *= p.current / p.GetMaxCurrent()
 	}
 
-	return se.RemainingChargeDuration(power, p.TargetSoc())
+	return se.RemainingChargeDuration(power, p.GetTargetSoC())
 }
 
 // Stop stops the target charging request
@@ -80,16 +78,6 @@ func (p *Timer) Stop() {
 	}
 }
 
-// // Set sets the target charging time
-// func (p *Timer) Set(t time.Time) {
-// 	if p == nil {
-// 		return
-// 	}
-
-// 	p.TargetTime() = t
-// 	p.Publish("targetTime", p.TargetTime())
-// }
-
 // // Reset resets the target charging request
 // func (p *Timer) Reset() {
 // 	if p == nil {
@@ -102,7 +90,7 @@ func (p *Timer) Stop() {
 
 // Active calculates remaining charge duration and returns true if charge start is required to achieve target soc in time
 func (p *Timer) Active() bool {
-	if p == nil || p.TargetTime().IsZero() {
+	if p == nil || p.GetTargetTime().IsZero() {
 		return false
 	}
 
@@ -121,20 +109,20 @@ func (p *Timer) Active() bool {
 	}
 
 	// time
-	remainingDuration := time.Duration(float64(se.AssumedChargeDuration(p.TargetSoc(), power)) / soc.ChargeEfficiency)
+	remainingDuration := time.Duration(float64(se.AssumedChargeDuration(p.GetTargetSoC(), power)) / soc.ChargeEfficiency)
 	p.finishAt = time.Now().Add(remainingDuration).Round(time.Minute)
 
-	p.log.DEBUG.Printf("estimated charge duration: %v to %d%% at %.0fW", remainingDuration.Round(time.Minute), p.TargetSoc(), power)
+	p.log.DEBUG.Printf("estimated charge duration: %v to %d%% at %.0fW", remainingDuration.Round(time.Minute), p.GetTargetSoC(), power)
 	if p.active {
 		p.log.DEBUG.Printf("projected end: %v", p.finishAt)
-		p.log.DEBUG.Printf("desired finish time: %v", p.TargetTime())
+		p.log.DEBUG.Printf("desired finish time: %v", p.GetTargetTime())
 	} else {
-		p.log.DEBUG.Printf("projected start: %v", p.TargetTime().Add(-remainingDuration))
+		p.log.DEBUG.Printf("projected start: %v", p.GetTargetTime().Add(-remainingDuration))
 	}
 
 	// timer charging is already active- only deactivate once charging has stopped
 	if p.active {
-		if time.Now().After(p.TargetTime()) && p.GetStatus() != api.StatusC {
+		if time.Now().After(p.GetTargetTime()) && p.GetStatus() != api.StatusC {
 			p.Stop()
 		}
 
@@ -142,12 +130,12 @@ func (p *Timer) Active() bool {
 	}
 
 	// check if charging need be activated
-	if active := p.finishAt.After(p.TargetTime()); active {
+	if active := p.finishAt.After(p.GetTargetTime()); active {
 		p.active = active
 		p.Publish("targetTimeActive", p.active)
 
 		p.current = p.GetMaxCurrent()
-		p.log.INFO.Printf("target charging active for %v: projected %v (%v remaining)", p.TargetTime(), p.finishAt, remainingDuration.Round(time.Minute))
+		p.log.INFO.Printf("target charging active for %v: projected %v (%v remaining)", p.GetTargetTime(), p.finishAt, remainingDuration.Round(time.Minute))
 	}
 
 	return p.active
@@ -158,11 +146,11 @@ func (p *Timer) Handle() float64 {
 	action := "steady"
 
 	switch {
-	case p.finishAt.Before(p.TargetTime().Add(-deviation)):
+	case p.finishAt.Before(p.GetTargetTime().Add(-deviation)):
 		p.current--
 		action = "slowdown"
 
-	case p.finishAt.After(p.TargetTime()):
+	case p.finishAt.After(p.GetTargetTime()):
 		p.current++
 		action = "speedup"
 	}
