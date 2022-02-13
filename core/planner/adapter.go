@@ -1,6 +1,8 @@
 package planner
 
 import (
+	"time"
+
 	"github.com/evcc-io/evcc/core/loadpoint"
 	"github.com/evcc-io/evcc/core/soc"
 )
@@ -10,4 +12,6 @@ type Adapter interface {
 	loadpoint.API
 	Publish(key string, val interface{})
 	SocEstimator() *soc.Estimator
+	TargetSoc() int
+	TargetTime() time.Time
 }

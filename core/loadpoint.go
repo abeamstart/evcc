@@ -133,6 +133,9 @@ type LoadPoint struct {
 	vehicle      api.Vehicle   // Currently active vehicle
 	vehicles     []api.Vehicle // Assigned vehicles
 	socEstimator *soc.Estimator
+
+	targetSoC    int
+	targetTime   time.Time
 	timePlanner  *planner.Timer
 	pricePlanner *planner.Pricer
 
@@ -1527,11 +1530,17 @@ func (lp *LoadPoint) Update(sitePower float64, cheap bool, batteryBuffered bool)
 		}
 
 	// target charging
-	case lp.timePlanner.DemandActive():
+	case lp.timePlanner.Active():
 		// 3p if available
 		if err = lp.scalePhasesIfAvailable(3); err == nil {
 			targetCurrent := lp.timePlanner.Handle()
 			err = lp.setLimit(targetCurrent, true)
+		}
+
+	case lp.pricePlanner.Active():
+		// 3p if available
+		if err = lp.scalePhasesIfAvailable(3); err == nil {
+			err = lp.setLimit(lp.GetMaxCurrent(), true)
 		}
 
 	case mode == api.ModeMinPV || mode == api.ModePV:

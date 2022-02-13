@@ -19,8 +19,6 @@ import (
 // Updater abstracts the LoadPoint implementation for testing
 type Updater interface {
 	Update(availablePower float64, cheapRate bool, batteryBuffered bool)
-	GetAssumedDuration() time.Duration
-	GetTargetTime() time.Time
 }
 
 // Site is the main configuration container. A site can host multiple loadpoints.
@@ -47,10 +45,9 @@ type Site struct {
 	pvMeters      []api.Meter // PV generation meters
 	batteryMeters []api.Meter // Battery charging meters
 
-	tariffs    tariff.Tariffs  // Tariff
-	loadpoints []*LoadPoint    // Loadpoints
-	planner    *planner.Pricer // Planner
-	savings    *Savings        // Savings
+	tariffs    tariff.Tariffs // Tariff
+	loadpoints []*LoadPoint   // Loadpoints
+	savings    *Savings       // Savings
 
 	// cached state
 	gridPower       float64 // Grid power
@@ -84,12 +81,14 @@ func NewSiteFromConfig(
 	Voltage = site.Voltage
 	site.loadpoints = loadpoints
 
+	if gridTariff := tariffs.Grid; gridTariff != nil {
+		for _, lp := range loadpoints {
+			lp.pricePlanner = planner.NewPricer(log, gridTariff, &adapter{LoadPoint: lp})
+		}
+	}
+
 	site.tariffs = tariffs
 	site.savings = NewSavings(tariffs)
-
-	if gridTariff := site.tariffs.Grid; gridTariff != nil {
-		site.planner = planner.NewPricer(log, gridTariff)
-	}
 
 	if site.Meters.GridMeterRef != "" {
 		site.gridMeter = cp.Meter(site.Meters.GridMeterRef)
@@ -400,17 +399,10 @@ func (site *Site) update(lp Updater) {
 	site.log.DEBUG.Println("----")
 
 	var cheap bool
-	gridTariff := site.tariffs.Grid
-	if _, ok := gridTariff.(*tariff.Fixed); gridTariff != nil && !ok {
-		price, err := gridTariff.CurrentPrice()
-
-		if err == nil {
-			if cheap = price <= site.CheapRate; !cheap {
-				cheap, err = site.planner.PlanActive(lp.GetAssumedDuration(), lp.GetTargetTime())
-			}
-		}
-
-		if err != nil {
+	if gridTariff := site.tariffs.Grid; gridTariff != nil {
+		if price, err := gridTariff.CurrentPrice(); err == nil {
+			cheap = price <= site.CheapRate
+		} else {
 			site.log.ERROR.Println(err)
 		}
 	}

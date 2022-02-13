@@ -16,10 +16,10 @@ const (
 // Timer is the target charging handler
 type Timer struct {
 	Adapter
-	log       *util.Logger
-	current   float64
-	SoC       int
-	Time      time.Time
+	log     *util.Logger
+	current float64
+	// SoC       int
+	// Time      time.Time
 	finishAt  time.Time
 	active    bool
 	validated bool
@@ -36,140 +36,139 @@ func NewTimer(log *util.Logger, api Adapter) *Timer {
 }
 
 // MustValidateDemand resets the flag for detecting if DemandActive has been called
-func (lp *Timer) MustValidateDemand() {
-	if lp == nil {
+func (p *Timer) MustValidateDemand() {
+	if p == nil {
 		return
 	}
 
-	lp.validated = false
+	p.validated = false
 }
 
 // DemandValidated returns if DemandActive has been called
-func (lp *Timer) DemandValidated() bool {
-	if lp == nil {
+func (p *Timer) DemandValidated() bool {
+	if p == nil {
 		return false
 	}
 
-	return lp.validated
+	return p.validated
 }
 
-func (lp *Timer) RemainingDuration() time.Duration {
-	se := lp.SocEstimator()
+func (p *Timer) RemainingDuration() time.Duration {
+	se := p.SocEstimator()
 	if se == nil {
 		return 0
 	}
 
-	power := lp.GetMaxPower()
-	if lp.active {
-		power *= lp.current / lp.GetMaxCurrent()
+	power := p.GetMaxPower()
+	if p.active {
+		power *= p.current / p.GetMaxCurrent()
 	}
 
-	return se.RemainingChargeDuration(power, lp.SoC)
+	return se.RemainingChargeDuration(power, p.TargetSoc())
 }
 
 // Stop stops the target charging request
-func (lp *Timer) Stop() {
-	if lp == nil {
+func (p *Timer) Stop() {
+	if p == nil {
 		return
 	}
 
-	if lp.active {
-		lp.active = false
-		lp.Publish("targetTimeActive", lp.active)
-		lp.log.DEBUG.Println("target charging: disable")
+	if p.active {
+		p.active = false
+		p.Publish("targetTimeActive", p.active)
+		p.log.DEBUG.Println("target charging: disable")
 	}
 }
 
-// Set sets the target charging time
-func (lp *Timer) Set(t time.Time) {
-	if lp == nil {
-		return
-	}
+// // Set sets the target charging time
+// func (p *Timer) Set(t time.Time) {
+// 	if p == nil {
+// 		return
+// 	}
 
-	lp.Time = t
-	lp.Publish("targetTime", lp.Time)
-}
+// 	p.TargetTime() = t
+// 	p.Publish("targetTime", p.TargetTime())
+// }
 
-// Reset resets the target charging request
-func (lp *Timer) Reset() {
-	if lp == nil {
-		return
-	}
+// // Reset resets the target charging request
+// func (p *Timer) Reset() {
+// 	if p == nil {
+// 		return
+// 	}
 
-	lp.Set(time.Time{})
-	lp.Stop()
-}
+// 	p.Set(time.Time{})
+// 	p.Stop()
+// }
 
-// DemandActive calculates remaining charge duration and returns true if charge start is required to achieve target soc in time
-func (lp *Timer) DemandActive() bool {
-	if lp == nil || lp.Time.IsZero() {
+// Active calculates remaining charge duration and returns true if charge start is required to achieve target soc in time
+func (p *Timer) Active() bool {
+	if p == nil || p.TargetTime().IsZero() {
 		return false
 	}
 
 	// demand validation has been called
-	lp.validated = true
+	p.validated = true
 
 	// power
-	power := lp.GetMaxPower()
-	if lp.active {
-		power *= lp.current / lp.GetMaxCurrent()
+	power := p.GetMaxPower()
+	if p.active {
+		power *= p.current / p.GetMaxCurrent()
 	}
 
-	se := lp.SocEstimator()
+	se := p.SocEstimator()
 	if se == nil {
-		lp.log.WARN.Println("target charging: not possible")
 		return false
 	}
 
 	// time
-	remainingDuration := time.Duration(float64(se.AssumedChargeDuration(lp.SoC, power)) / soc.ChargeEfficiency)
-	lp.finishAt = time.Now().Add(remainingDuration).Round(time.Minute)
+	remainingDuration := time.Duration(float64(se.AssumedChargeDuration(p.TargetSoc(), power)) / soc.ChargeEfficiency)
+	p.finishAt = time.Now().Add(remainingDuration).Round(time.Minute)
 
-	lp.log.DEBUG.Printf("estimated charge duration: %v to %d%% at %.0fW", remainingDuration.Round(time.Minute), lp.SoC, power)
-	if lp.active {
-		lp.log.DEBUG.Printf("projected end: %v", lp.finishAt)
-		lp.log.DEBUG.Printf("desired finish time: %v", lp.Time)
+	p.log.DEBUG.Printf("estimated charge duration: %v to %d%% at %.0fW", remainingDuration.Round(time.Minute), p.TargetSoc(), power)
+	if p.active {
+		p.log.DEBUG.Printf("projected end: %v", p.finishAt)
+		p.log.DEBUG.Printf("desired finish time: %v", p.TargetTime())
 	} else {
-		lp.log.DEBUG.Printf("projected start: %v", lp.Time.Add(-remainingDuration))
+		p.log.DEBUG.Printf("projected start: %v", p.TargetTime().Add(-remainingDuration))
 	}
 
 	// timer charging is already active- only deactivate once charging has stopped
-	if lp.active {
-		if time.Now().After(lp.Time) && lp.GetStatus() != api.StatusC {
-			lp.Stop()
+	if p.active {
+		if time.Now().After(p.TargetTime()) && p.GetStatus() != api.StatusC {
+			p.Stop()
 		}
 
-		return lp.active
+		return p.active
 	}
 
 	// check if charging need be activated
-	if active := lp.finishAt.After(lp.Time); active {
-		lp.active = active
-		lp.Publish("targetTimeActive", lp.active)
+	if active := p.finishAt.After(p.TargetTime()); active {
+		p.active = active
+		p.Publish("targetTimeActive", p.active)
 
-		lp.current = lp.GetMaxCurrent()
-		lp.log.INFO.Printf("target charging active for %v: projected %v (%v remaining)", lp.Time, lp.finishAt, remainingDuration.Round(time.Minute))
+		p.current = p.GetMaxCurrent()
+		p.log.INFO.Printf("target charging active for %v: projected %v (%v remaining)", p.TargetTime(), p.finishAt, remainingDuration.Round(time.Minute))
 	}
 
-	return lp.active
+	return p.active
 }
 
 // Handle adjusts current up/down to achieve desired target time taking.
-func (lp *Timer) Handle() float64 {
+func (p *Timer) Handle() float64 {
 	action := "steady"
 
 	switch {
-	case lp.finishAt.Before(lp.Time.Add(-deviation)):
-		lp.current--
+	case p.finishAt.Before(p.TargetTime().Add(-deviation)):
+		p.current--
 		action = "slowdown"
 
-	case lp.finishAt.After(lp.Time):
-		lp.current++
+	case p.finishAt.After(p.TargetTime()):
+		p.current++
 		action = "speedup"
 	}
 
-	lp.current = math.Max(math.Min(lp.current, lp.GetMaxCurrent()), lp.GetMinCurrent())
-	lp.log.DEBUG.Printf("target charging: %s (%.3gA)", action, lp.current)
+	p.current = math.Max(math.Min(p.current, p.GetMaxCurrent()), p.GetMinCurrent())
+	p.log.DEBUG.Printf("target charging: %s (%.3gA)", action, p.current)
 
-	return lp.current
+	return p.current
 }

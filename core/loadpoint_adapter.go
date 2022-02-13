@@ -18,3 +18,11 @@ func (a *adapter) Publish(key string, val interface{}) {
 func (a *adapter) SocEstimator() *soc.Estimator {
 	return a.LoadPoint.socEstimator
 }
+
+func (a *adapter) TargetSoC() int {
+	return a.LoadPoint.targetSoC
+}
+
+func (a *adapter) TargetTime() int {
+	return a.LoadPoint.targetTime
+}
