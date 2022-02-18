@@ -748,7 +748,7 @@ func TestMinSoC(t *testing.T) {
 			vehicleSoc: tc.soc,
 		}
 
-		if res := lp.minSocNotReached(); tc.res != res {
+		if res := lp.minMobilityNotReached(); tc.res != res {
 			t.Errorf("expected %v, got %v", tc.res, res)
 		}
 	}

@@ -55,6 +55,7 @@ type ActionConfig struct {
 	MinCurrent *float64    `mapstructure:"minCurrent,omitempty"` // Minimum Current
 	MaxCurrent *float64    `mapstructure:"maxCurrent,omitempty"` // Maximum Current
 	MinSoC     *int        `mapstructure:"minSoC,omitempty"`     // Minimum SoC
+	MinRange   *int        `mapstructure:"minRange,omitempty"`   // Minimum Range
 	TargetSoC  *int        `mapstructure:"targetSoC,omitempty"`  // Target SoC
 }
 

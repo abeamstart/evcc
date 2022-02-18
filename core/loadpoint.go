@@ -62,8 +62,9 @@ type PollConfig struct {
 type SoCConfig struct {
 	Poll     PollConfig `mapstructure:"poll"`
 	Estimate bool       `mapstructure:"estimate"`
-	Min      int        `mapstructure:"min"`    // Default minimum SoC, guarded by mutex
-	Target   int        `mapstructure:"target"` // Default target SoC, guarded by mutex
+	Min      int        `mapstructure:"min"`      // Default minimum SoC, guarded by mutex
+	Target   int        `mapstructure:"target"`   // Default target SoC, guarded by mutex
+	MinRange int        `mapstructure:"minRange"` // Default minimum range, guarded by mutex
 }
 
 // Poll modes
@@ -146,6 +147,7 @@ type LoadPoint struct {
 
 	// charge progress
 	vehicleSoc              float64       // Vehicle SoC
+	vehicleRange            int64         // Vehicle range
 	chargeDuration          time.Duration // Charge duration
 	chargedEnergy           float64       // Charged energy while connected in Wh
 	chargeRemainingDuration time.Duration // Remaining charge duration
@@ -501,6 +503,9 @@ func (lp *LoadPoint) applyAction(actionCfg api.ActionConfig) {
 	if actionCfg.MinSoC != nil {
 		lp.SetMinSoC(*actionCfg.MinSoC)
 	}
+	if actionCfg.MinRange != nil {
+		lp.SetMinRange(*actionCfg.MinRange)
+	}
 	if actionCfg.TargetSoC != nil {
 		lp.SetTargetSoC(*actionCfg.TargetSoC)
 	}
@@ -540,6 +545,7 @@ func (lp *LoadPoint) Prepare(uiChan chan<- util.Param, pushChan chan<- push.Even
 	lp.publish("mode", lp.Mode)
 	lp.publish("targetSoC", lp.SoC.Target)
 	lp.publish("minSoC", lp.SoC.Min)
+	lp.publish("minRange", lp.SoC.MinRange)
 	lp.Unlock()
 
 	// always treat single vehicle as attached to allow poll mode: always
@@ -684,12 +690,19 @@ func (lp *LoadPoint) targetSocReached() bool {
 		lp.vehicleSoc >= float64(lp.SoC.Target)
 }
 
-// minSocNotReached checks if minimum is configured and not reached.
+// minMobilityNotReached checks if minimum is configured and not reached.
 // If vehicle is not configured this will always return true
-func (lp *LoadPoint) minSocNotReached() bool {
-	return lp.vehicle != nil &&
-		lp.SoC.Min > 0 &&
-		lp.vehicleSoc < float64(lp.SoC.Min)
+func (lp *LoadPoint) minMobilityNotReached() bool {
+	switch {
+	case lp.vehicle == nil:
+		return false
+	case lp.SoC.Min > 0 && lp.vehicleSoc < float64(lp.SoC.Min):
+		return true
+	case lp.SoC.MinRange > 0 && lp.vehicleRange < int64(lp.SoC.MinRange):
+		return true
+	default:
+		return false
+	}
 }
 
 // climateActive checks if vehicle has active climate request
@@ -851,6 +864,7 @@ func (lp *LoadPoint) wakeUpVehicle() {
 // unpublishVehicle resets published vehicle data
 func (lp *LoadPoint) unpublishVehicle() {
 	lp.vehicleSoc = 0
+	lp.vehicleRange = 0
 
 	lp.publish("vehicleSoC", 0.0)
 	lp.publish("vehicleRange", int64(0))
@@ -1409,6 +1423,7 @@ func (lp *LoadPoint) publishSoCAndRange() {
 			// range
 			if vs, ok := lp.vehicle.(api.VehicleRange); ok {
 				if rng, err := vs.Range(); err == nil {
+					lp.vehicleRange = rng
 					lp.log.DEBUG.Printf("vehicle range: %dkm", rng)
 					lp.publish("vehicleRange", rng)
 				}
@@ -1515,7 +1530,7 @@ func (lp *LoadPoint) Update(sitePower float64, cheap bool, batteryBuffered bool)
 	case mode == api.ModeOff:
 		err = lp.setLimit(0, true)
 
-	case lp.minSocNotReached():
+	case lp.minMobilityNotReached():
 		// 3p if available
 		if err = lp.scalePhasesIfAvailable(3); err == nil {
 			err = lp.setLimit(lp.GetMaxCurrent(), true)

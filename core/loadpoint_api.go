@@ -97,6 +97,21 @@ func (lp *LoadPoint) SetMinSoC(soc int) {
 	}
 }
 
+// SetMinRange sets loadpoint charge minimum range
+func (lp *LoadPoint) SetMinRange(rng int) {
+	lp.Lock()
+	defer lp.Unlock()
+
+	lp.log.DEBUG.Println("set min range:", rng)
+
+	// apply immediately
+	if lp.SoC.MinRange != rng {
+		lp.SoC.MinRange = rng
+		lp.publish("minRange", rng)
+		lp.requestUpdate()
+	}
+}
+
 // GetPhases returns loadpoint enabled phases
 func (lp *LoadPoint) GetPhases() int {
 	lp.Lock()
