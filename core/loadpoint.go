@@ -424,7 +424,7 @@ func (lp *LoadPoint) evVehicleDisconnectHandler() {
 	lp.log.INFO.Println("car disconnected")
 
 	// phases are unknown when vehicle disconnects
-	lp.resetMeasuredPhases()
+	lp.setMeasuredPhases(0)
 
 	// energy and duration
 	lp.publish("chargedEnergy", lp.chargedEnergy)
@@ -1266,12 +1266,8 @@ func (lp *LoadPoint) updateChargeCurrents() {
 		}
 
 		if phases >= 1 {
-			lp.Lock()
-			lp.measuredPhases = phases
-			lp.Unlock()
-
 			lp.log.DEBUG.Printf("detected phases: %dp", phases)
-			lp.publish("activePhases", phases)
+			lp.setMeasuredPhases(phases)
 		}
 	}
 }

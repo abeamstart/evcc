@@ -6,13 +6,19 @@ import (
 	"github.com/evcc-io/evcc/api"
 )
 
-// resetMeasuredPhases resets measured phases to unknown on vehicle disconnect, phase switch or phase api call
-func (lp *LoadPoint) resetMeasuredPhases() {
+// TODO move measuredPhases to api/sync
+
+// setMeasuredPhases provides synchronized access to measuredPhases
+func (lp *LoadPoint) setMeasuredPhases(phases int) {
 	lp.Lock()
-	lp.measuredPhases = 0
+	lp.measuredPhases = phases
 	lp.Unlock()
 
-	lp.publish("activePhases", lp.activePhases())
+	if phases == 0 {
+		phases = lp.activePhases()
+	}
+
+	lp.publish("activePhases", phases)
 }
 
 // getMeasuredPhases provides synchronized access to measuredPhases

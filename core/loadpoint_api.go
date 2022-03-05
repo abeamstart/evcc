@@ -143,8 +143,7 @@ func (lp *LoadPoint) setPhases(phases int) {
 		// TODO sync phase timer
 		lp.publishTimer(phaseTimer, 0, timerInactive)
 
-		// TODO sync measured phases
-		lp.resetMeasuredPhases()
+		lp.setMeasuredPhases(0)
 	}
 }
 
