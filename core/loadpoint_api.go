@@ -178,7 +178,7 @@ func (lp *LoadPoint) getTargetTime() time.Time {
 func (lp *LoadPoint) setTargetTime(finishAt time.Time) {
 	lp.Lock()
 	defer lp.Unlock()
-	// TODO check setter
+	// TODO sync socTimer
 	lp.socTimer.Set(finishAt)
 }
 
@@ -190,7 +190,6 @@ func (lp *LoadPoint) SetVehicle(vehicle api.Vehicle) {
 	}
 	lp.log.DEBUG.Println("set vehicle:", title)
 
-	// TODO sync vehicle
 	if lp.getVehicle() != vehicle {
 		lp.setVehicle(vehicle)
 	}

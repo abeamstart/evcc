@@ -831,8 +831,8 @@ func (lp *LoadPoint) wakeUpVehicle() {
 	}
 
 	// vehicle
-	if lp.vehicle != nil {
-		if vs, ok := lp.vehicle.(api.AlarmClock); ok {
+	if vehicle := lp.getVehicle(); vehicle != nil {
+		if vs, ok := vehicle.(api.AlarmClock); ok {
 			if err := vs.WakeUp(); err != nil {
 				lp.log.ERROR.Printf("wake-up vehicle: %v", err)
 			}
@@ -875,7 +875,7 @@ func (lp *LoadPoint) startVehicleDetection() {
 
 // vehicleUnidentified checks if loadpoint has multiple vehicles associated and starts discovery period
 func (lp *LoadPoint) vehicleUnidentified() bool {
-	res := len(lp.vehicles) > 1 && lp.vehicle == nil &&
+	res := len(lp.vehicles) > 1 && lp.getVehicle() == nil &&
 		lp.clock.Since(lp.vehicleConnected) < vehicleDetectDuration
 
 	// request vehicle api refresh while waiting to identify
