@@ -18,6 +18,13 @@ func (lp *LoadPoint) GetStatus() api.ChargeStatus {
 	return lp.status
 }
 
+// charging returns the EVs charging state
+func (lp *LoadPoint) setStatus(status api.ChargeStatus) {
+	lp.Lock()
+	defer lp.Unlock()
+	lp.status = status
+}
+
 // GetMode returns loadpoint charge mode
 func (lp *LoadPoint) GetMode() api.ChargeMode {
 	lp.Lock()
@@ -43,9 +50,8 @@ func (lp *LoadPoint) SetMode(mode api.ChargeMode) {
 
 func (lp *LoadPoint) setMode(mode api.ChargeMode) {
 	lp.Lock()
-	defer lp.Unlock()
-
 	lp.Mode = mode
+	lp.Unlock()
 	lp.publish("mode", mode)
 
 	// immediately allow pv mode activity
@@ -73,10 +79,10 @@ func (lp *LoadPoint) SetTargetSoC(soc int) {
 
 func (lp *LoadPoint) setTargetSoC(soc int) {
 	lp.Lock()
-	defer lp.Unlock()
-
 	lp.SoC.Target = soc
 	lp.socTimer.SoC = soc
+	lp.Unlock()
+
 	lp.publish("targetSoC", soc)
 }
 
@@ -123,6 +129,23 @@ func (lp *LoadPoint) SetPhases(phases int) error {
 	return nil
 }
 
+// setPhases sets the number of enabled phases without modifying the charger
+func (lp *LoadPoint) setPhases(phases int) {
+	if lp.GetPhases() != phases {
+		lp.Lock()
+		lp.Phases = phases
+		lp.phaseTimer = time.Time{}
+		lp.Unlock()
+
+		lp.publish("phases", lp.GetPhases())
+		// TODO sync phase timer
+		lp.publishTimer(phaseTimer, 0, timerInactive)
+
+		// TODO sync measured phases
+		lp.resetMeasuredPhases()
+	}
+}
+
 // SetTargetCharge sets loadpoint charge targetSoC
 func (lp *LoadPoint) SetTargetCharge(finishAt time.Time, soc int) {
 	lp.log.DEBUG.Printf("set target charge: %d @ %v", soc, finishAt)
@@ -152,6 +175,7 @@ func (lp *LoadPoint) getTargetTime() time.Time {
 func (lp *LoadPoint) setTargetTime(finishAt time.Time) {
 	lp.Lock()
 	defer lp.Unlock()
+	// TODO check setter
 	lp.socTimer.Set(finishAt)
 }
 
@@ -216,15 +240,19 @@ func (lp *LoadPoint) GetMinCurrent() float64 {
 
 // SetMinCurrent returns the min loadpoint current
 func (lp *LoadPoint) SetMinCurrent(current float64) {
-	lp.Lock()
-	defer lp.Unlock()
-
 	lp.log.DEBUG.Println("set min current:", current)
 
-	if current != lp.MinCurrent {
-		lp.MinCurrent = current
-		lp.publish("minCurrent", lp.MinCurrent)
+	if lp.GetMinCurrent() != current {
+		lp.setMinCurrent(current)
+		lp.requestUpdate()
 	}
+}
+
+func (lp *LoadPoint) setMinCurrent(current float64) {
+	lp.Lock()
+	lp.MinCurrent = current
+	lp.Unlock()
+	lp.publish("minCurrent", lp.MinCurrent)
 }
 
 // GetMaxCurrent returns the max loadpoint current
@@ -236,15 +264,19 @@ func (lp *LoadPoint) GetMaxCurrent() float64 {
 
 // SetMaxCurrent returns the max loadpoint current
 func (lp *LoadPoint) SetMaxCurrent(current float64) {
-	lp.Lock()
-	defer lp.Unlock()
-
 	lp.log.DEBUG.Println("set max current:", current)
 
-	if current != lp.MaxCurrent {
-		lp.MaxCurrent = current
-		lp.publish("maxCurrent", lp.MaxCurrent)
+	if lp.GetMaxCurrent() != current {
+		lp.setMaxCurrent(current)
+		lp.requestUpdate()
 	}
+}
+
+func (lp *LoadPoint) setMaxCurrent(current float64) {
+	lp.Lock()
+	lp.MaxCurrent = current
+	lp.Unlock()
+	lp.publish("maxCurrent", lp.MaxCurrent)
 }
 
 // GetMinPower returns the min loadpoint power for a single phase
@@ -254,6 +286,7 @@ func (lp *LoadPoint) GetMinPower() float64 {
 
 // GetMaxPower returns the max loadpoint power taking vehicle capabilities and phase scaling into account
 func (lp *LoadPoint) GetMaxPower() float64 {
+	// TODO sync maxActivePhases
 	return Voltage * lp.GetMaxCurrent() * float64(lp.maxActivePhases())
 }
 
@@ -262,6 +295,7 @@ func (lp *LoadPoint) setRemainingDuration(chargeRemainingDuration time.Duration)
 	lp.Lock()
 	defer lp.Unlock()
 
+	// TODO sync chargeRemainingDuration
 	if lp.chargeRemainingDuration != chargeRemainingDuration {
 		lp.chargeRemainingDuration = chargeRemainingDuration
 		lp.publish("chargeRemainingDuration", chargeRemainingDuration)
@@ -280,6 +314,7 @@ func (lp *LoadPoint) setRemainingEnergy(chargeRemainingEnergy float64) {
 	lp.Lock()
 	defer lp.Unlock()
 
+	// TODO sync chargeRemainingEnergy
 	if lp.chargeRemainingEnergy != chargeRemainingEnergy {
 		lp.chargeRemainingEnergy = chargeRemainingEnergy
 		lp.publish("chargeRemainingEnergy", chargeRemainingEnergy)

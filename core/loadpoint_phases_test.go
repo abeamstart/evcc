@@ -137,8 +137,8 @@ func TestPvScalePhases(t *testing.T) {
 			t.Fatalf("%v invalid test case", tc)
 		}
 
-		if lp.Phases != tc.physical {
-			t.Error("wrong phases", lp.Phases, tc.physical)
+		if lp.GetPhases() != tc.physical {
+			t.Error("wrong phases", lp.GetPhases(), tc.physical)
 		}
 
 		if phs := lp.activePhases(); phs != tc.actExpected {
@@ -166,7 +166,7 @@ func TestPvScalePhases(t *testing.T) {
 			lp.phaseTimer = time.Time{}
 
 			// reset to initial state
-			lp.Phases = tc.physical
+			lp.SetPhases(tc.physical)
 			lp.measuredPhases = tc.measuredPhases
 
 			plainCharger.EXPECT().Enable(false).Return(nil).MaxTimes(1)
@@ -294,8 +294,8 @@ func TestPvScalePhasesTimer(t *testing.T) {
 		switch {
 		case tc.res != res:
 			t.Errorf("expected %v, got %v", tc.res, res)
-		case lp.Phases != tc.toPhases:
-			t.Errorf("expected %dp, got %dp", tc.toPhases, lp.Phases)
+		case lp.GetPhases() != tc.toPhases:
+			t.Errorf("expected %dp, got %dp", tc.toPhases, lp.GetPhases())
 		}
 	}
 }

@@ -92,10 +92,10 @@ type LoadPoint struct {
 
 	// exposed public configuration
 	sync.Mutex                // guard status
-	Mode       api.ChargeMode `mapstructure:"mode"` // Charge mode, guarded by mutex
+	Mode       api.ChargeMode `mapstructure:"mode"` // Charge mode. Must be synchronized.
 
 	Title       string   `mapstructure:"title"`    // UI title
-	Phases      int      `mapstructure:"phases"`   // Charger enabled phases
+	Phases      int      `mapstructure:"phases"`   // Charger enabled phases. Must be synchronized.
 	ChargerRef  string   `mapstructure:"charger"`  // Charger reference
 	VehicleRef  string   `mapstructure:"vehicle"`  // Vehicle reference
 	VehiclesRef []string `mapstructure:"vehicles"` // Vehicles reference
@@ -110,8 +110,8 @@ type LoadPoint struct {
 	ResetOnDisconnect bool `mapstructure:"resetOnDisconnect"`
 	onDisconnect      api.ActionConfig
 
-	MinCurrent    float64       // PV mode: start current	Min+PV mode: min current
-	MaxCurrent    float64       // Max allowed current. Physically ensured by the charger
+	MinCurrent    float64       // PV mode: start current or Min+PV mode: min current. Must be synchronized.
+	MaxCurrent    float64       // Max allowed current. Physically ensured by the charger. Must be synchronized.
 	GuardDuration time.Duration // charger enable/disable minimum holding time
 
 	enabled                bool      // Charger enabled state
@@ -134,8 +134,8 @@ type LoadPoint struct {
 	socTimer     *soc.Timer
 
 	// cached state
-	status         api.ChargeStatus       // Charger status
-	remoteDemand   loadpoint.RemoteDemand // External status demand
+	status         api.ChargeStatus       // Charger status. Must be synchronized.
+	remoteDemand   loadpoint.RemoteDemand // External status demand. Must be synchronized.
 	chargePower    float64                // Charging power
 	chargeCurrents []float64              // Phase currents
 	connectedTime  time.Time              // Time when vehicle was connected
@@ -188,11 +188,11 @@ func NewLoadPointFromConfig(log *util.Logger, cp configProvider, other map[strin
 		}
 	}
 
-	if lp.MinCurrent == 0 {
+	if lp.GetMinCurrent() == 0 {
 		lp.log.WARN.Println("minCurrent must not be zero")
 	}
 
-	if lp.MaxCurrent <= lp.MinCurrent {
+	if lp.GetMaxCurrent() <= lp.GetMinCurrent() {
 		lp.log.WARN.Println("maxCurrent must be larger than minCurrent")
 	}
 
@@ -529,17 +529,15 @@ func (lp *LoadPoint) Prepare(uiChan chan<- util.Param, pushChan chan<- push.Even
 
 	// publish initial values
 	lp.publish("title", lp.Title)
-	lp.publish("minCurrent", lp.MinCurrent)
-	lp.publish("maxCurrent", lp.MaxCurrent)
-	lp.publish("phases", lp.Phases)
+	lp.publish("minCurrent", lp.GetMinCurrent())
+	lp.publish("maxCurrent", lp.GetMaxCurrent())
+	lp.publish("phases", lp.GetPhases())
 	lp.publish("activePhases", lp.activePhases())
 	lp.publish("hasVehicle", len(lp.vehicles) > 0)
 
-	lp.Lock()
-	lp.publish("mode", lp.Mode)
-	lp.publish("targetSoC", lp.SoC.Target)
-	lp.publish("minSoC", lp.SoC.Min)
-	lp.Unlock()
+	lp.publish("mode", lp.GetMode())
+	lp.publish("targetSoC", lp.GetTargetSoC())
+	lp.publish("minSoC", lp.GetMinSoC())
 
 	// always treat single vehicle as attached to allow poll mode: always
 	if len(lp.vehicles) == 1 {
@@ -665,13 +663,6 @@ func (lp *LoadPoint) connected() bool {
 // charging returns the EVs charging state
 func (lp *LoadPoint) charging() bool {
 	return lp.GetStatus() == api.StatusC
-}
-
-// charging returns the EVs charging state
-func (lp *LoadPoint) setStatus(status api.ChargeStatus) {
-	lp.Lock()
-	defer lp.Unlock()
-	lp.status = status
 }
 
 // targetSocReached checks if target is configured and reached.
@@ -979,22 +970,6 @@ func (lp *LoadPoint) scalePhasesIfAvailable(phases int) error {
 	}
 
 	return nil
-}
-
-// setPhases sets the number of enabled phases without modifying the charger
-func (lp *LoadPoint) setPhases(phases int) {
-	if lp.GetPhases() != phases {
-		lp.Lock()
-		lp.Phases = phases
-		lp.phaseTimer = time.Time{}
-		lp.Unlock()
-
-		lp.publish("phases", lp.Phases)
-		// TODO sync phase timer
-		lp.publishTimer(phaseTimer, 0, timerInactive)
-
-		lp.resetMeasuredPhases()
-	}
 }
 
 // scalePhases adjusts the number of active phases and returns the appropriate charging current.
@@ -1524,7 +1499,7 @@ func (lp *LoadPoint) Update(sitePower float64, cheap bool, batteryBuffered bool)
 	}
 
 	// Wake-up checks
-	if lp.enabled && lp.status == api.StatusB &&
+	if lp.enabled && lp.GetStatus() == api.StatusB &&
 		int(lp.vehicleSoc) < lp.SoC.Target && lp.wakeUpTimer.Expired() {
 		lp.wakeUpVehicle()
 	}

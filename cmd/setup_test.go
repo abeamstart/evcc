@@ -31,7 +31,7 @@ func TestYamlOff(t *testing.T) {
 		t.Error(err)
 	}
 
-	if lp.Mode != api.ModeOff {
+	if lp.GetMode() != api.ModeOff {
 		t.Errorf("expected `off`, got %s", lp.Mode)
 	}
 }
