@@ -137,7 +137,7 @@ func (lp *LoadPoint) setPhases(phases int) {
 		lp.phaseTimer = time.Time{}
 		lp.Unlock()
 
-		lp.publish("phases", lp.GetPhases())
+		lp.publish("phases", phases)
 		// TODO sync phase timer
 		lp.publishTimer(phaseTimer, 0, timerInactive)
 
@@ -252,7 +252,8 @@ func (lp *LoadPoint) setMinCurrent(current float64) {
 	lp.Lock()
 	lp.MinCurrent = current
 	lp.Unlock()
-	lp.publish("minCurrent", lp.MinCurrent)
+
+	lp.publish("minCurrent", current)
 }
 
 // GetMaxCurrent returns the max loadpoint current
@@ -276,7 +277,8 @@ func (lp *LoadPoint) setMaxCurrent(current float64) {
 	lp.Lock()
 	lp.MaxCurrent = current
 	lp.Unlock()
-	lp.publish("maxCurrent", lp.MaxCurrent)
+
+	lp.publish("maxCurrent", current)
 }
 
 // GetMinPower returns the min loadpoint power for a single phase
@@ -292,12 +294,11 @@ func (lp *LoadPoint) GetMaxPower() float64 {
 
 // setRemainingDuration sets the estimated remaining charging duration
 func (lp *LoadPoint) setRemainingDuration(chargeRemainingDuration time.Duration) {
-	lp.Lock()
-	defer lp.Unlock()
-
 	// TODO sync chargeRemainingDuration
-	if lp.chargeRemainingDuration != chargeRemainingDuration {
+	if lp.GetRemainingDuration() != chargeRemainingDuration {
+		lp.Lock()
 		lp.chargeRemainingDuration = chargeRemainingDuration
+		lp.Unlock()
 		lp.publish("chargeRemainingDuration", chargeRemainingDuration)
 	}
 }
@@ -311,12 +312,11 @@ func (lp *LoadPoint) GetRemainingDuration() time.Duration {
 
 // setRemainingEnergy sets the remaining charge energy in Wh
 func (lp *LoadPoint) setRemainingEnergy(chargeRemainingEnergy float64) {
-	lp.Lock()
-	defer lp.Unlock()
-
 	// TODO sync chargeRemainingEnergy
-	if lp.chargeRemainingEnergy != chargeRemainingEnergy {
+	if lp.GetRemainingEnergy() != chargeRemainingEnergy {
+		lp.Lock()
 		lp.chargeRemainingEnergy = chargeRemainingEnergy
+		lp.Unlock()
 		lp.publish("chargeRemainingEnergy", chargeRemainingEnergy)
 	}
 }
