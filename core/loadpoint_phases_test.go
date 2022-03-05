@@ -66,8 +66,8 @@ var (
 )
 
 func testScale(t *testing.T, lp *LoadPoint, power float64, direction string, tc testCase) {
-	act := lp.activePhases()
-	max := lp.maxActivePhases()
+	act := lp.activePhases(false)
+	max := lp.activePhases(true)
 	scaled := lp.pvScalePhases(power, minA, maxA)
 
 	if strings.Contains(tc.scale, direction[0:1]) {
@@ -141,10 +141,10 @@ func TestPvScalePhases(t *testing.T) {
 			t.Error("wrong phases", lp.GetPhases(), tc.physical)
 		}
 
-		if phs := lp.activePhases(); phs != tc.actExpected {
+		if phs := lp.activePhases(false); phs != tc.actExpected {
 			t.Errorf("expected active %d, got %d", tc.actExpected, phs)
 		}
-		if phs := lp.maxActivePhases(); phs != tc.maxExpected {
+		if phs := lp.activePhases(true); phs != tc.maxExpected {
 			t.Errorf("expected max %d, got %d", tc.maxExpected, phs)
 		}
 		ctrl.Finish()

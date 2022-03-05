@@ -70,7 +70,6 @@ func (lp *LoadPoint) GetTargetSoC() int {
 func (lp *LoadPoint) SetTargetSoC(soc int) {
 	lp.log.DEBUG.Println("set target soc:", soc)
 
-	// apply immediately
 	if lp.GetTargetSoC() != soc {
 		lp.setTargetSoC(soc)
 		lp.requestUpdate()
@@ -102,6 +101,7 @@ func (lp *LoadPoint) SetMinSoC(soc int) {
 		lp.Lock()
 		lp.SoC.Min = soc
 		lp.Unlock()
+
 		lp.publish("minSoC", soc)
 		lp.requestUpdate()
 	}
@@ -182,11 +182,16 @@ func (lp *LoadPoint) setTargetTime(finishAt time.Time) {
 
 // SetVehicle sets the active vehicle
 func (lp *LoadPoint) SetVehicle(vehicle api.Vehicle) {
-	lp.Lock()
-	defer lp.Unlock()
+	title := unknownVehicle
+	if vehicle != nil {
+		title = vehicle.Title()
+	}
+	lp.log.DEBUG.Println("set vehicle:", title)
 
 	// TODO sync vehicle
-	lp.setActiveVehicle(vehicle)
+	if lp.getVehicle() != vehicle {
+		lp.setVehicle(vehicle)
+	}
 }
 
 // RemoteControl sets remote status demand
@@ -285,8 +290,7 @@ func (lp *LoadPoint) GetMinPower() float64 {
 
 // GetMaxPower returns the max loadpoint power taking vehicle capabilities and phase scaling into account
 func (lp *LoadPoint) GetMaxPower() float64 {
-	// TODO sync maxActivePhases
-	return Voltage * lp.GetMaxCurrent() * float64(lp.maxActivePhases())
+	return Voltage * lp.GetMaxCurrent() * float64(lp.activePhases(true))
 }
 
 // setRemainingDuration sets the estimated remaining charging duration
