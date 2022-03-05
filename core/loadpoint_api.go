@@ -27,9 +27,6 @@ func (lp *LoadPoint) GetMode() api.ChargeMode {
 
 // SetMode sets loadpoint charge mode
 func (lp *LoadPoint) SetMode(mode api.ChargeMode) {
-	lp.Lock()
-	defer lp.Unlock()
-
 	if _, err := api.ChargeModeString(mode.String()); err != nil {
 		lp.log.WARN.Printf("invalid charge mode: %s", string(mode))
 		return
@@ -38,15 +35,22 @@ func (lp *LoadPoint) SetMode(mode api.ChargeMode) {
 	lp.log.DEBUG.Printf("set charge mode: %s", string(mode))
 
 	// apply immediately
-	if lp.Mode != mode {
-		lp.Mode = mode
-		lp.publish("mode", mode)
-
-		// immediately allow pv mode activity
-		lp.elapsePVTimer()
-
+	if lp.GetMode() != mode {
+		lp.setMode(mode)
 		lp.requestUpdate()
 	}
+}
+
+func (lp *LoadPoint) setMode(mode api.ChargeMode) {
+	lp.Lock()
+	defer lp.Unlock()
+
+	lp.Mode = mode
+	lp.publish("mode", mode)
+
+	// immediately allow pv mode activity
+	// TODO sync pv timers
+	lp.elapsePVTimer()
 }
 
 // GetTargetSoC returns loadpoint charge target soc
@@ -56,24 +60,24 @@ func (lp *LoadPoint) GetTargetSoC() int {
 	return lp.SoC.Target
 }
 
-func (lp *LoadPoint) setTargetSoC(soc int) {
-	lp.SoC.Target = soc
-	lp.socTimer.SoC = soc
-	lp.publish("targetSoC", soc)
-}
-
 // SetTargetSoC sets loadpoint charge target soc
 func (lp *LoadPoint) SetTargetSoC(soc int) {
-	lp.Lock()
-	defer lp.Unlock()
-
 	lp.log.DEBUG.Println("set target soc:", soc)
 
 	// apply immediately
-	if lp.SoC.Target != soc {
+	if lp.GetTargetSoC() != soc {
 		lp.setTargetSoC(soc)
 		lp.requestUpdate()
 	}
+}
+
+func (lp *LoadPoint) setTargetSoC(soc int) {
+	lp.Lock()
+	defer lp.Unlock()
+
+	lp.SoC.Target = soc
+	lp.socTimer.SoC = soc
+	lp.publish("targetSoC", soc)
 }
 
 // GetMinSoC returns loadpoint charge minimum soc
@@ -85,14 +89,13 @@ func (lp *LoadPoint) GetMinSoC() int {
 
 // SetMinSoC sets loadpoint charge minimum soc
 func (lp *LoadPoint) SetMinSoC(soc int) {
-	lp.Lock()
-	defer lp.Unlock()
-
 	lp.log.DEBUG.Println("set min soc:", soc)
 
 	// apply immediately
-	if lp.SoC.Min != soc {
+	if lp.GetMinSoC() != soc {
+		lp.Lock()
 		lp.SoC.Min = soc
+		lp.Unlock()
 		lp.publish("minSoC", soc)
 		lp.requestUpdate()
 	}
@@ -111,6 +114,7 @@ func (lp *LoadPoint) SetPhases(phases int) error {
 		return fmt.Errorf("invalid number of phases: %d", phases)
 	}
 
+	// TODO sync scalephases
 	if _, ok := lp.charger.(api.ChargePhases); ok {
 		return lp.scalePhases(phases)
 	}
@@ -121,14 +125,12 @@ func (lp *LoadPoint) SetPhases(phases int) error {
 
 // SetTargetCharge sets loadpoint charge targetSoC
 func (lp *LoadPoint) SetTargetCharge(finishAt time.Time, soc int) {
-	lp.Lock()
-	defer lp.Unlock()
-
 	lp.log.DEBUG.Printf("set target charge: %d @ %v", soc, finishAt)
 
 	// apply immediately
-	if lp.socTimer.Time != finishAt || lp.SoC.Target != soc {
-		lp.socTimer.Set(finishAt)
+	if lp.getTargetTime() != finishAt || lp.GetTargetSoC() != soc {
+		// TODO sync setTargetTime in soc Timer
+		lp.setTargetTime(finishAt)
 
 		// don't remove soc
 		if !finishAt.IsZero() {
@@ -136,7 +138,21 @@ func (lp *LoadPoint) SetTargetCharge(finishAt time.Time, soc int) {
 			lp.setTargetSoC(soc)
 			lp.requestUpdate()
 		}
+
+		lp.requestUpdate()
 	}
+}
+
+func (lp *LoadPoint) getTargetTime() time.Time {
+	lp.Lock()
+	defer lp.Unlock()
+	return lp.socTimer.Time
+}
+
+func (lp *LoadPoint) setTargetTime(finishAt time.Time) {
+	lp.Lock()
+	defer lp.Unlock()
+	lp.socTimer.Set(finishAt)
 }
 
 // SetVehicle sets the active vehicle
@@ -144,6 +160,7 @@ func (lp *LoadPoint) SetVehicle(vehicle api.Vehicle) {
 	lp.Lock()
 	defer lp.Unlock()
 
+	// TODO sync vehicle
 	lp.setActiveVehicle(vehicle)
 }
 
@@ -155,14 +172,26 @@ func (lp *LoadPoint) RemoteControl(source string, demand loadpoint.RemoteDemand)
 	lp.log.DEBUG.Println("remote demand:", demand)
 
 	// apply immediately
-	if lp.remoteDemand != demand {
-		lp.remoteDemand = demand
-
-		lp.publish("remoteDisabled", demand)
-		lp.publish("remoteDisabledSource", source)
-
+	if lp.getRemoteDemand() != demand {
+		// TODO sync remotedemand
+		lp.setRemoteDemand(demand, source)
 		lp.requestUpdate()
 	}
+}
+
+func (lp *LoadPoint) getRemoteDemand() loadpoint.RemoteDemand {
+	lp.Lock()
+	defer lp.Unlock()
+	return lp.remoteDemand
+}
+
+func (lp *LoadPoint) setRemoteDemand(demand loadpoint.RemoteDemand, source string) {
+	lp.Lock()
+	lp.remoteDemand = demand
+	lp.Unlock()
+
+	lp.publish("remoteDisabled", demand)
+	lp.publish("remoteDisabledSource", source)
 }
 
 // HasChargeMeter determines if a physical charge meter is attached
