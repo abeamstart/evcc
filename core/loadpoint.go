@@ -776,6 +776,63 @@ func (lp *LoadPoint) selectVehicleByID(id string) api.Vehicle {
 	return nil
 }
 
+// TODO move to sync
+func (lp *LoadPoint) getVehicle() api.Vehicle {
+	lp.Lock()
+	defer lp.Unlock()
+	return lp.vehicle
+}
+
+// TODO move to sync
+// setVehicle assigns currently active vehicle and configures soc estimator
+func (lp *LoadPoint) setVehicle(vehicle api.Vehicle) {
+	lp.Lock()
+
+	from := unknownVehicle
+	if lp.vehicle != nil {
+		coordinator.release(lp.vehicle)
+		from = lp.vehicle.Title()
+	}
+	to := unknownVehicle
+	if vehicle != nil {
+		coordinator.aquire(lp, vehicle)
+		to = vehicle.Title()
+	}
+	lp.log.INFO.Printf("vehicle updated: %s -> %s", from, to)
+
+	lp.vehicle = vehicle
+
+	if vehicle != nil {
+		lp.socEstimator = soc.NewEstimator(lp.log, lp.charger, vehicle, lp.SoC.Estimate)
+
+		lp.publish("vehiclePresent", true)
+		lp.publish("vehicleTitle", vehicle.Title())
+		lp.publish("vehicleCapacity", vehicle.Capacity())
+
+		lp.applyAction(vehicle.OnIdentified())
+
+		// odometer
+		if v, ok := vehicle.(api.VehicleOdometer); ok {
+			if odo, err := v.Odometer(); err == nil {
+				lp.log.DEBUG.Printf("vehicle odometer: %.0fkm", odo)
+				lp.publish("vehicleOdometer", odo)
+			}
+		}
+
+		lp.progress.Reset()
+	} else {
+		lp.socEstimator = nil
+
+		lp.publish("vehiclePresent", false)
+		lp.publish("vehicleTitle", nil)
+		lp.publish("vehicleCapacity", nil)
+	}
+
+	lp.Unlock()
+
+	lp.unpublishVehicle()
+}
+
 func (lp *LoadPoint) wakeUpVehicle() {
 	// charger
 	if c, ok := lp.charger.(api.AlarmClock); ok {
