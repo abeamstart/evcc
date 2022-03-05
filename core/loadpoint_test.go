@@ -158,6 +158,8 @@ func TestUpdatePowerZero(t *testing.T) {
 			status:      tc.status, // no status change
 		}
 
+		lp.socTimer = soc.NewTimer(lp.log, &adapter{LoadPoint: lp})
+
 		attachListeners(t, lp)
 
 		// initial status
@@ -403,6 +405,8 @@ func TestDisableAndEnableAtTargetSoC(t *testing.T) {
 		},
 	}
 
+	lp.socTimer = soc.NewTimer(lp.log, &adapter{LoadPoint: lp})
+
 	attachListeners(t, lp)
 
 	lp.enabled = true
@@ -471,6 +475,8 @@ func TestSetModeAndSocAtDisconnect(t *testing.T) {
 		ResetOnDisconnect: true,
 	}
 
+	lp.socTimer = soc.NewTimer(lp.log, &adapter{LoadPoint: lp})
+
 	attachListeners(t, lp)
 	lp.collectDefaults()
 
@@ -537,6 +543,8 @@ func TestChargedEnergyAtDisconnect(t *testing.T) {
 		MaxCurrent:  maxA,
 		status:      api.StatusC,
 	}
+
+	lp.socTimer = soc.NewTimer(lp.log, &adapter{LoadPoint: lp})
 
 	attachListeners(t, lp)
 

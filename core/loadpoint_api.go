@@ -80,8 +80,6 @@ func (lp *LoadPoint) SetTargetSoC(soc int) {
 func (lp *LoadPoint) setTargetSoC(soc int) {
 	lp.Lock()
 	lp.SoC.Target = soc
-	// TODO sync socTimer
-	lp.socTimer.SoC = soc
 	lp.Unlock()
 
 	lp.publish("targetSoC", soc)
