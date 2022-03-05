@@ -166,7 +166,7 @@ func TestPvScalePhases(t *testing.T) {
 			lp.phaseTimer = time.Time{}
 
 			// reset to initial state
-			lp.SetPhases(tc.physical)
+			_ = lp.SetPhases(tc.physical)
 			lp.setMeasuredPhases(tc.measuredPhases)
 
 			plainCharger.EXPECT().Enable(false).Return(nil).MaxTimes(1)
