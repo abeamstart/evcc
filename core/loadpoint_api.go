@@ -6,6 +6,7 @@ import (
 
 	"github.com/evcc-io/evcc/api"
 	"github.com/evcc-io/evcc/core/loadpoint"
+	"github.com/evcc-io/evcc/core/soc"
 	"github.com/evcc-io/evcc/core/wrapper"
 )
 
@@ -195,6 +196,61 @@ func (lp *LoadPoint) SetVehicle(vehicle api.Vehicle) {
 	}
 }
 
+func (lp *LoadPoint) getVehicle() api.Vehicle {
+	lp.Lock()
+	defer lp.Unlock()
+	return lp.vehicle
+}
+
+// setVehicle assigns currently active vehicle and configures soc estimator
+func (lp *LoadPoint) setVehicle(vehicle api.Vehicle) {
+	lp.Lock()
+
+	from := unknownVehicle
+	if lp.vehicle != nil {
+		coordinator.release(lp.vehicle)
+		from = lp.vehicle.Title()
+	}
+	to := unknownVehicle
+	if vehicle != nil {
+		coordinator.aquire(lp, vehicle)
+		to = vehicle.Title()
+	}
+	lp.log.INFO.Printf("vehicle updated: %s -> %s", from, to)
+
+	lp.vehicle = vehicle
+
+	if vehicle != nil {
+		lp.socEstimator = soc.NewEstimator(lp.log, lp.charger, vehicle, lp.SoC.Estimate)
+
+		lp.publish("vehiclePresent", true)
+		lp.publish("vehicleTitle", vehicle.Title())
+		lp.publish("vehicleCapacity", vehicle.Capacity())
+
+		lp.applyAction(vehicle.OnIdentified())
+
+		// odometer
+		if v, ok := vehicle.(api.VehicleOdometer); ok {
+			if odo, err := v.Odometer(); err == nil {
+				lp.log.DEBUG.Printf("vehicle odometer: %.0fkm", odo)
+				lp.publish("vehicleOdometer", odo)
+			}
+		}
+
+		lp.progress.Reset()
+	} else {
+		lp.socEstimator = nil
+
+		lp.publish("vehiclePresent", false)
+		lp.publish("vehicleTitle", nil)
+		lp.publish("vehicleCapacity", nil)
+	}
+
+	lp.Unlock()
+
+	lp.unpublishVehicle()
+}
+
 // RemoteControl sets remote status demand
 func (lp *LoadPoint) RemoteControl(source string, demand loadpoint.RemoteDemand) {
 	lp.log.DEBUG.Println("remote demand:", demand)
@@ -232,6 +288,14 @@ func (lp *LoadPoint) GetChargePower() float64 {
 	lp.Lock()
 	defer lp.Unlock()
 	return lp.chargePower
+}
+
+func (lp *LoadPoint) setChargePower(power float64) {
+	lp.Lock()
+	lp.chargePower = power
+	lp.Unlock()
+
+	lp.publish("chargePower", power)
 }
 
 // GetMinCurrent returns the min loadpoint current
