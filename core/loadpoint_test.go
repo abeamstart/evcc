@@ -168,7 +168,7 @@ func TestUpdatePowerZero(t *testing.T) {
 			tc.expect(charger)
 		}
 
-		lp.SetMode(tc.mode)
+		lp.setMode(tc.mode)
 		lp.Update(0, false, false) // sitePower 0
 
 		ctrl.Finish()
@@ -476,7 +476,7 @@ func TestSetModeAndSocAtDisconnect(t *testing.T) {
 
 	lp.enabled = true
 	lp.chargeCurrent = float64(minA)
-	lp.SetMode(api.ModeNow)
+	lp.setMode(api.ModeNow)
 
 	t.Log("charging at min")
 	charger.EXPECT().Enabled().Return(lp.enabled, nil)
@@ -542,7 +542,7 @@ func TestChargedEnergyAtDisconnect(t *testing.T) {
 
 	lp.enabled = true
 	lp.chargeCurrent = float64(maxA)
-	lp.SetMode(api.ModeNow)
+	lp.setMode(api.ModeNow)
 
 	// attach cache for verifying values
 	_, expectCache := cacheExpecter(t, lp)

@@ -44,6 +44,11 @@ func (lp *LoadPoint) SetMode(mode api.ChargeMode) {
 	// apply immediately
 	if lp.GetMode() != mode {
 		lp.setMode(mode)
+
+		// immediately allow pv mode activity
+		// TODO sync pv timers
+		lp.elapsePVTimer()
+
 		lp.requestUpdate()
 	}
 }
@@ -53,10 +58,6 @@ func (lp *LoadPoint) setMode(mode api.ChargeMode) {
 	lp.Mode = mode
 	lp.Unlock()
 	lp.publish("mode", mode)
-
-	// immediately allow pv mode activity
-	// TODO sync pv timers
-	lp.elapsePVTimer()
 }
 
 // GetTargetSoC returns loadpoint charge target soc
@@ -140,6 +141,7 @@ func (lp *LoadPoint) setPhases(phases int) {
 		lp.Unlock()
 
 		lp.publish("phases", phases)
+
 		// TODO sync phase timer
 		lp.publishTimer(phaseTimer, 0, timerInactive)
 
