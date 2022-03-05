@@ -147,8 +147,8 @@ type LoadPoint struct {
 	vehicleSoc              float64       // Vehicle SoC
 	chargeDuration          time.Duration // Charge duration
 	chargedEnergy           float64       // Charged energy while connected in Wh
-	chargeRemainingDuration time.Duration // Remaining charge duration
-	chargeRemainingEnergy   float64       // Remaining charge energy in Wh
+	chargeRemainingDuration time.Duration // Remaining charge duration. Must be synchronized.
+	chargeRemainingEnergy   float64       // Remaining charge energy in Wh. Must be synchronized.
 	progress                *Progress     // Step-wise progress indicator
 }
 
@@ -792,8 +792,8 @@ func (lp *LoadPoint) setActiveVehicle(vehicle api.Vehicle) {
 		lp.socEstimator = soc.NewEstimator(lp.log, lp.charger, vehicle, lp.SoC.Estimate)
 
 		lp.publish("vehiclePresent", true)
-		lp.publish("vehicleTitle", lp.vehicle.Title())
-		lp.publish("vehicleCapacity", lp.vehicle.Capacity())
+		lp.publish("vehicleTitle", vehicle.Title())
+		lp.publish("vehicleCapacity", vehicle.Capacity())
 
 		lp.applyAction(vehicle.OnIdentified())
 
@@ -802,8 +802,8 @@ func (lp *LoadPoint) setActiveVehicle(vehicle api.Vehicle) {
 		lp.socEstimator = nil
 
 		lp.publish("vehiclePresent", false)
-		lp.publish("vehicleTitle", "")
-		lp.publish("vehicleCapacity", int64(0))
+		lp.publish("vehicleTitle", nil)
+		lp.publish("vehicleCapacity", nil)
 	}
 
 	lp.unpublishVehicle()
@@ -832,11 +832,12 @@ func (lp *LoadPoint) wakeUpVehicle() {
 func (lp *LoadPoint) unpublishVehicle() {
 	lp.vehicleSoc = 0
 
-	lp.publish("vehicleSoC", 0.0)
-	lp.publish("vehicleRange", int64(0))
-	lp.publish("vehicleOdometer", 0.0)
+	lp.publish("vehicleSoC", nil)
+	lp.publish("vehicleRange", nil)
+	lp.publish("vehicleOdometer", nil)
 
-	lp.setRemainingDuration(-1)
+	lp.setRemainingDuration(0)
+	lp.setRemainingEnergy(0)
 }
 
 // startVehicleDetection resets connection timer and starts api refresh timer
@@ -1332,7 +1333,7 @@ func (lp *LoadPoint) publishSoCAndRange() {
 			if lp.charging() {
 				lp.setRemainingDuration(lp.socEstimator.RemainingChargeDuration(lp.chargePower, lp.SoC.Target))
 			} else {
-				lp.setRemainingDuration(-1)
+				lp.setRemainingDuration(0)
 			}
 
 			lp.setRemainingEnergy(1e3 * lp.socEstimator.RemainingChargeEnergy(lp.SoC.Target))
