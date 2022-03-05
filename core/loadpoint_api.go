@@ -80,6 +80,7 @@ func (lp *LoadPoint) SetTargetSoC(soc int) {
 func (lp *LoadPoint) setTargetSoC(soc int) {
 	lp.Lock()
 	lp.SoC.Target = soc
+	// TODO sync socTimer
 	lp.socTimer.SoC = soc
 	lp.Unlock()
 
@@ -155,13 +156,13 @@ func (lp *LoadPoint) SetTargetCharge(finishAt time.Time, soc int) {
 
 	// apply immediately
 	if lp.getTargetTime() != finishAt || lp.GetTargetSoC() != soc {
-		// TODO sync setTargetTime in soc Timer
+		// TODO sync socTimer / setTargetTime
 		lp.setTargetTime(finishAt)
 
 		// don't remove soc
 		if !finishAt.IsZero() {
-			lp.publish("targetTimeHourSuggestion", finishAt.Hour())
 			lp.setTargetSoC(soc)
+			lp.publish("targetTimeHourSuggestion", finishAt.Hour())
 			lp.requestUpdate()
 		}
 
