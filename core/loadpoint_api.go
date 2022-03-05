@@ -120,6 +120,8 @@ func (lp *LoadPoint) SetPhases(phases int) error {
 		return fmt.Errorf("invalid number of phases: %d", phases)
 	}
 
+	lp.log.DEBUG.Println("set phases:", phases)
+
 	// TODO sync scalephases
 	if _, ok := lp.charger.(api.ChargePhases); ok {
 		return lp.scalePhases(phases)
@@ -190,14 +192,10 @@ func (lp *LoadPoint) SetVehicle(vehicle api.Vehicle) {
 
 // RemoteControl sets remote status demand
 func (lp *LoadPoint) RemoteControl(source string, demand loadpoint.RemoteDemand) {
-	lp.Lock()
-	defer lp.Unlock()
-
 	lp.log.DEBUG.Println("remote demand:", demand)
 
 	// apply immediately
 	if lp.getRemoteDemand() != demand {
-		// TODO sync remotedemand
 		lp.setRemoteDemand(demand, source)
 		lp.requestUpdate()
 	}
