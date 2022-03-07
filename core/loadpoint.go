@@ -140,6 +140,7 @@ type LoadPoint struct {
 	remoteDemand   loadpoint.RemoteDemand // External status demand. Must be synchronized.
 	chargePower    float64                // Charging power. Must be synchronized.
 	chargeCurrents []float64              // Phase currents
+	targetTime     time.Time              // Target charging time goal. Must be synchronized.
 	connectedTime  time.Time              // Time when vehicle was connected
 	pvTimer        time.Time              // PV enabled/disable timer
 	phaseTimer     time.Time              // 1p3p switch timer

@@ -149,36 +149,34 @@ func (lp *LoadPoint) setPhases(phases int) {
 }
 
 // SetTargetCharge sets loadpoint charge targetSoC
-func (lp *LoadPoint) SetTargetCharge(finishAt time.Time, soc int) {
-	lp.log.DEBUG.Printf("set target charge: %d @ %v", soc, finishAt)
+func (lp *LoadPoint) SetTargetCharge(targetTime time.Time, soc int) {
+	lp.log.DEBUG.Printf("set target charge: %d @ %v", soc, targetTime)
 
 	// apply immediately
-	if lp.getTargetTime() != finishAt || lp.GetTargetSoC() != soc {
-		// TODO sync socTimer / setTargetTime
-		lp.setTargetTime(finishAt)
+	if lp.GetTargetTime() != targetTime || lp.GetTargetSoC() != soc {
+		lp.SetTargetTime(targetTime)
 
 		// don't remove soc
-		if !finishAt.IsZero() {
+		if !targetTime.IsZero() {
 			lp.setTargetSoC(soc)
-			lp.publish("targetTimeHourSuggestion", finishAt.Hour())
+			lp.publish("targetTimeHourSuggestion", targetTime.Hour())
 			lp.requestUpdate()
 		}
-
-		lp.requestUpdate()
 	}
 }
 
-func (lp *LoadPoint) getTargetTime() time.Time {
+func (lp *LoadPoint) GetTargetTime() time.Time {
 	lp.Lock()
 	defer lp.Unlock()
-	return lp.socTimer.Time
+	return lp.targetTime
 }
 
-func (lp *LoadPoint) setTargetTime(finishAt time.Time) {
+func (lp *LoadPoint) SetTargetTime(targetTime time.Time) {
 	lp.Lock()
-	defer lp.Unlock()
-	// TODO sync socTimer
-	lp.socTimer.Set(finishAt)
+	lp.targetTime = targetTime
+	lp.Unlock()
+
+	lp.publish("targetTime", targetTime)
 }
 
 // SetVehicle sets the active vehicle
