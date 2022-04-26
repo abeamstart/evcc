@@ -13,7 +13,7 @@ import (
 	"github.com/evcc-io/evcc/util"
 )
 
-// Warp configures generic charger and charge meter for an Warp loadpoint
+// Warp is the Warp charger implementation
 type Warp struct {
 	log           *util.Logger
 	root          string
@@ -22,16 +22,18 @@ type Warp struct {
 	statusG       func() (string, error)
 	meterG        func() (string, error)
 	meterDetailsG func() (string, error)
+	nfcG          func() (string, error)
 	enableS       func(bool) error
 	maxcurrentS   func(int64) error
 	enabled       bool // cache
+	tag           warp.NfcTag
 }
 
 func init() {
 	registry.Add("warp", NewWarpFromConfig)
 }
 
-//go:generate go run ../cmd/tools/decorate.go -f decorateWarp -b *Warp -r api.Charger -t "api.Meter,CurrentPower,func() (float64, error)" -t "api.MeterEnergy,TotalEnergy,func() (float64, error)" -t "api.MeterCurrent,Currents,func() (float64, float64, float64, error)"
+//go:generate go run ../cmd/tools/decorate.go -f decorateWarp -b *Warp -r api.Charger -t "api.Meter,CurrentPower,func() (float64, error)" -t "api.MeterEnergy,TotalEnergy,func() (float64, error)" -t "api.MeterCurrent,Currents,func() (float64, float64, float64, error)" -t "api.Identifier,Identify,func() (string, error)"
 
 // NewWarpFromConfig creates a new configurable charger
 func NewWarpFromConfig(other map[string]interface{}) (api.Charger, error) {
@@ -73,7 +75,23 @@ func NewWarpFromConfig(other map[string]interface{}) (api.Charger, error) {
 		currents = wb.currents
 	}
 
-	return decorateWarp(wb, currentPower, totalEnergy, currents), err
+	detectNfc := provider.NewMqtt(wb.log, wb.client,
+		fmt.Sprintf("%s/evse/low_level_state", wb.root), cc.Timeout,
+	).StringGetter()
+
+	var identity func() (string, error)
+	if state, err := detectNfc(); err == nil {
+		var res warp.LowLevelState
+		if err := json.Unmarshal([]byte(state), &res); err != nil {
+			return nil, err
+		}
+
+		if len(res.AdcValues) > 2 {
+			identity = wb.identify
+		}
+	}
+
+	return decorateWarp(wb, currentPower, totalEnergy, currents, identity), err
 }
 
 // NewWarp creates a new configurable charger
@@ -105,6 +123,7 @@ func NewWarp(mqttconf mqtt.Config, topic string, timeout time.Duration) (*Warp, 
 	wb.statusG = stringG(fmt.Sprintf("%s/evse/state", topic))
 	wb.meterG = stringG(fmt.Sprintf("%s/meter/state", topic))
 	wb.meterDetailsG = stringG(fmt.Sprintf("%s/meter/detailed_values", topic))
+	wb.nfcG = stringG(fmt.Sprintf("%s/nfc/seen_tags", topic))
 
 	wb.enableS = provider.NewMqtt(log, client,
 		fmt.Sprintf("%s/evse/auto_start_charging_update", topic), 0).
@@ -316,4 +335,21 @@ func (wb *Warp) currents() (float64, float64, float64, error) {
 	}
 
 	return 0, 0, 0, err
+}
+
+func (wb *Warp) identify() (string, error) {
+	var tags []warp.NfcTag
+
+	s, err := wb.nfcG()
+	if err == nil {
+		err = json.Unmarshal([]byte(s), &tags)
+	}
+
+	for _, tag := range tags {
+		if tag.LastSeen > wb.tag.LastSeen {
+			wb.tag = tag
+		}
+	}
+
+	return string(wb.tag.ID), err
 }
